@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, FolderTree } from "lucide-react";
@@ -24,21 +24,97 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { departments, locations, users } from "@/lib/mock-data";
+import { getLocations } from "@/lib/services/locations";
+import { getDepartmentById, updateDepartment } from "@/lib/services/departments";
+import type { Department } from "@/lib/services/departments";
+import type { Location } from "@/lib/services/locations";
 
 export default function EditDepartmentPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const dept = departments.find((d) => d.id === id) || departments[0];
+  const [dept, setDept] = useState<Department | null>(null);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [locationId, setLocationId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const numId = Number(id);
+    if (Number.isNaN(numId)) {
+      setError("Invalid id");
+      setLoading(false);
+      return;
+    }
+    Promise.all([getDepartmentById(numId), getLocations()])
+      .then(([d, locs]) => {
+        setDept(d ?? null);
+        setLocations(locs);
+        if (d) setLocationId(String(d.location_id));
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!dept) return;
+    setError(null);
+    const locId = Number(locationId);
+    if (Number.isNaN(locId)) {
+      setError("Please select a location");
+      return;
+    }
+    const form = e.currentTarget;
+    const name = (form.querySelector("#name") as HTMLInputElement).value.trim();
+    const code = (form.querySelector("#code") as HTMLInputElement)?.value?.trim() || undefined;
+    const phone = (form.querySelector("#phone") as HTMLInputElement)?.value?.trim() || undefined;
+    const email = (form.querySelector("#email") as HTMLInputElement)?.value?.trim() || undefined;
+    const description = (form.querySelector("#description") as HTMLTextAreaElement)?.value?.trim() || undefined;
+
+    if (!name) return;
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    router.push(`/departments/${id}`);
+    try {
+      await updateDepartment(dept.id, {
+        location_id: locId,
+        name,
+        code,
+        phone,
+        email,
+        description,
+      });
+      router.push(`/departments/${id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+      setIsSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Departments", href: "/departments" }, { label: "Edit" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-muted-foreground">Loading...</p>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !dept) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Departments", href: "/departments" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-destructive">{error ?? "Department not found"}</p>
+          <Button variant="outline" asChild className="mt-4">
+            <Link href="/departments">Back to Departments</Link>
+          </Button>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -84,16 +160,17 @@ export default function EditDepartmentPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <div className="space-y-2">
                   <Label htmlFor="location">Location *</Label>
-                  <Select defaultValue={dept.locationId} required>
+                  <Select value={locationId} onValueChange={setLocationId} required>
                     <SelectTrigger id="location">
-                      <SelectValue />
+                      <SelectValue placeholder="Select location" />
                     </SelectTrigger>
                     <SelectContent>
                       {locations.map((loc) => (
-                        <SelectItem key={loc.id} value={loc.id}>
-                          {loc.name}
+                        <SelectItem key={loc.id} value={String(loc.id)}>
+                          {loc.name} ({loc.organization_name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -106,40 +183,23 @@ export default function EditDepartmentPage() {
                     <Input id="name" defaultValue={dept.name} required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="code">Department Code *</Label>
-                    <Input id="code" defaultValue={dept.code} required />
+                    <Label htmlFor="code">Department Code</Label>
+                    <Input id="code" defaultValue={dept.code ?? ""} placeholder="e.g., RAD" />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="hod">Head of Department</Label>
-                  <Select defaultValue={dept.hodId || undefined}>
-                    <SelectTrigger id="hod">
-                      <SelectValue placeholder="Select HOD (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users
-                        .filter((u) => u.role === "hod" || u.role === "org_admin")
-                        .map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Extension</Label>
-                    <Input id="phone" defaultValue="1234" />
+                    <Input id="phone" defaultValue={dept.phone ?? ""} placeholder="e.g., 1234" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Department Email</Label>
                     <Input
                       id="email"
                       type="email"
-                      defaultValue={`${dept.code.toLowerCase()}@example.com`}
+                      defaultValue={dept.email ?? ""}
+                      placeholder="dept@example.com"
                     />
                   </div>
                 </div>
@@ -150,6 +210,7 @@ export default function EditDepartmentPage() {
                     id="description"
                     placeholder="Brief description of the department..."
                     rows={3}
+                    defaultValue={dept.description ?? ""}
                   />
                 </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   Type,
   Hash,
@@ -30,8 +31,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  getProperties,
+  getPropertyById,
+  updateProperty,
+  deleteProperty,
+  type Property,
+} from "@/lib/services/properties";
 
-const typeIcons = {
+const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   text: Type,
   number: Hash,
   date: Calendar,
@@ -40,87 +66,150 @@ const typeIcons = {
   file: FileUp,
 };
 
-const properties = [
-  {
-    id: "1",
-    name: "Brand",
-    type: "text" as const,
-    required: true,
-    usedIn: ["Laptop", "Monitor", "Phone"],
-    createdAt: "Jan 15, 2024",
-  },
-  {
-    id: "2",
-    name: "Model",
-    type: "text" as const,
-    required: true,
-    usedIn: ["Laptop", "Monitor", "Phone", "Printer"],
-    createdAt: "Jan 15, 2024",
-  },
-  {
-    id: "3",
-    name: "RAM (GB)",
-    type: "number" as const,
-    required: true,
-    usedIn: ["Laptop", "Desktop"],
-    validation: { min: 1, max: 256 },
-    createdAt: "Jan 15, 2024",
-  },
-  {
-    id: "4",
-    name: "Storage (GB)",
-    type: "number" as const,
-    required: true,
-    usedIn: ["Laptop", "Desktop", "Server"],
-    validation: { min: 1, max: 10000 },
-    createdAt: "Jan 15, 2024",
-  },
-  {
-    id: "5",
-    name: "Operating System",
-    type: "dropdown" as const,
-    required: true,
-    usedIn: ["Laptop", "Desktop"],
-    options: ["Windows 11", "macOS", "Linux"],
-    createdAt: "Jan 16, 2024",
-  },
-  {
-    id: "6",
-    name: "License Key",
-    type: "text" as const,
-    required: true,
-    usedIn: ["Software License"],
-    createdAt: "Jan 20, 2024",
-  },
-  {
-    id: "7",
-    name: "Renewal Date",
-    type: "date" as const,
-    required: true,
-    usedIn: ["Software License", "Subscription"],
-    createdAt: "Jan 20, 2024",
-  },
-  {
-    id: "8",
-    name: "Is Active",
-    type: "boolean" as const,
-    required: false,
-    usedIn: ["Software License", "Subscription", "Equipment"],
-    defaultValue: true,
-    createdAt: "Jan 22, 2024",
-  },
-  {
-    id: "9",
-    name: "Documentation",
-    type: "file" as const,
-    required: false,
-    usedIn: ["Equipment", "Vehicle"],
-    createdAt: "Jan 25, 2024",
-  },
-];
+function PropertyEditDialog({
+  propertyId,
+  onClose,
+  onSaved,
+}: {
+  propertyId: number
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [property, setProperty] = React.useState<Property | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [name, setName] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [dataType, setDataType] = React.useState("text");
+
+  React.useEffect(() => {
+    getPropertyById(propertyId)
+      .then((p) => {
+        setProperty(p ?? null);
+        if (p) {
+          setName(p.name);
+          setDescription(p.description ?? "");
+          setDataType(p.data_type ?? "text");
+        }
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      .finally(() => setLoading(false));
+  }, [propertyId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!property) return;
+    setError(null);
+    setSaving(true);
+    try {
+      await updateProperty(property.id, {
+        name: name.trim() || property.name,
+        description: description.trim() || undefined,
+        data_type: dataType,
+      });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Property</DialogTitle>
+          <DialogDescription>
+            Update property name, description, and data type.
+          </DialogDescription>
+        </DialogHeader>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : !property ? (
+          <p className="text-sm text-destructive">Property not found.</p>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Property Name *</Label>
+              <Input
+                id="edit-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-desc">Description</Label>
+              <Textarea
+                id="edit-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                placeholder="Optional description"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-type">Data Type</Label>
+              <Select value={dataType} onValueChange={setDataType}>
+                <SelectTrigger id="edit-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Text</SelectItem>
+                  <SelectItem value="number">Number</SelectItem>
+                  <SelectItem value="date">Date</SelectItem>
+                  <SelectItem value="dropdown">Dropdown</SelectItem>
+                  <SelectItem value="boolean">Boolean</SelectItem>
+                  <SelectItem value="file">File</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function PropertyBuilderList() {
+  const [items, setItems] = React.useState<Property[]>([]);
+  const [error, setError] = React.useState<string | null>(null);
+  const [editId, setEditId] = React.useState<number | null>(null);
+
+  const loadList = React.useCallback(() => {
+    getProperties()
+      .then(setItems)
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load properties"));
+  }, []);
+
+  React.useEffect(() => {
+    loadList();
+  }, [loadList]);
+
+  if (error) {
+    return <div className="text-sm text-destructive">{error}</div>;
+  }
+
+  if (!items.length) {
+    return (
+      <div className="text-sm text-muted-foreground">No properties found.</div>
+    );
+  }
+
   return (
+    <>
     <Card className="bg-card border-border">
       <CardContent className="p-0">
         <Table>
@@ -135,8 +224,8 @@ export function PropertyBuilderList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {properties.map((property) => {
-              const TypeIcon = typeIcons[property.type];
+            {items.map((property) => {
+              const TypeIcon = typeIcons[property.data_type] ?? Type;
 
               return (
                 <TableRow key={property.id} className="border-border">
@@ -146,7 +235,7 @@ export function PropertyBuilderList() {
                   <TableCell>
                     <Badge variant="outline" className="gap-1.5 bg-secondary border-border">
                       <TypeIcon className="size-3" />
-                      <span className="capitalize">{property.type}</span>
+                      <span className="capitalize">{property.data_type}</span>
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -183,7 +272,11 @@ export function PropertyBuilderList() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {property.createdAt}
+                    {new Date(property.created_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -193,7 +286,7 @@ export function PropertyBuilderList() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setEditId(property.id)}>
                           <Pencil className="mr-2 size-4" />
                           Edit Property
                         </DropdownMenuItem>
@@ -202,7 +295,18 @@ export function PropertyBuilderList() {
                           Duplicate
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={async () => {
+                            if (!confirm("Delete this property?")) return;
+                            try {
+                              await deleteProperty(property.id);
+                              loadList();
+                            } catch {
+                              // ignore
+                            }
+                          }}
+                        >
                           <Trash2 className="mr-2 size-4" />
                           Delete
                         </DropdownMenuItem>
@@ -216,5 +320,13 @@ export function PropertyBuilderList() {
         </Table>
       </CardContent>
     </Card>
+    {editId !== null && (
+      <PropertyEditDialog
+        propertyId={editId}
+        onClose={() => setEditId(null)}
+        onSaved={loadList}
+      />
+    )}
+    </>
   );
 }

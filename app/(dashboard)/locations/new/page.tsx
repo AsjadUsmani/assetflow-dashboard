@@ -1,8 +1,6 @@
 "use client";
 
-import React from "react"
-
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MapPin } from "lucide-react";
@@ -26,18 +24,72 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { organizations } from "@/lib/mock-data";
+import { getOrganizations } from "@/lib/services/organizations";
+import { createLocation } from "@/lib/services/locations";
+import type { Organization } from "@/lib/services/organizations";
+
+const COUNTRY_OPTIONS = [
+  { value: "us", label: "United States" },
+  { value: "ca", label: "Canada" },
+  { value: "uk", label: "United Kingdom" },
+  { value: "au", label: "Australia" },
+  { value: "de", label: "Germany" },
+  { value: "fr", label: "France" },
+  { value: "in", label: "India" },
+];
 
 export default function NewLocationPage() {
   const router = useRouter();
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizationId, setOrganizationId] = useState<string>("");
+  const [countryCode, setCountryCode] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getOrganizations()
+      .then(setOrganizations)
+      .catch(() => setOrganizations([]));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    const form = e.currentTarget;
+    const orgId = Number(organizationId);
+    if (Number.isNaN(orgId) || !organizationId) {
+      setError("Please select an organization");
+      return;
+    }
+    const name = (form.querySelector("#name") as HTMLInputElement).value.trim();
+    const address = (form.querySelector("#address") as HTMLInputElement).value.trim();
+    if (!name || !address) return;
+    const city = (form.querySelector("#city") as HTMLInputElement)?.value?.trim() || undefined;
+    const state = (form.querySelector("#state") as HTMLInputElement)?.value?.trim() || undefined;
+    const postal_code = (form.querySelector("#zip") as HTMLInputElement)?.value?.trim() || undefined;
+    const phone = (form.querySelector("#phone") as HTMLInputElement)?.value?.trim() || undefined;
+    const email = (form.querySelector("#email") as HTMLInputElement)?.value?.trim() || undefined;
+    const notes = (form.querySelector("#notes") as HTMLTextAreaElement)?.value?.trim() || undefined;
+
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    router.push("/locations");
+    try {
+      await createLocation({
+        organization_id: orgId,
+        name,
+        address,
+        city,
+        state,
+        postal_code,
+        country_code: countryCode || undefined,
+        phone,
+        email,
+        notes,
+      });
+      router.push("/locations");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create location");
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -83,16 +135,21 @@ export default function NewLocationPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="organization">Organization *</Label>
-                    <Select required>
+                    <Select
+                      value={organizationId}
+                      onValueChange={setOrganizationId}
+                      required
+                    >
                       <SelectTrigger id="organization">
                         <SelectValue placeholder="Select organization" />
                       </SelectTrigger>
                       <SelectContent>
                         {organizations.map((org) => (
-                          <SelectItem key={org.id} value={org.id}>
+                          <SelectItem key={org.id} value={String(org.id)}>
                             {org.name}
                           </SelectItem>
                         ))}
@@ -120,8 +177,8 @@ export default function NewLocationPage() {
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="city">City *</Label>
-                    <Input id="city" placeholder="City" required />
+                    <Label htmlFor="city">City</Label>
+                    <Input id="city" placeholder="City" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="state">State/Province</Label>
@@ -134,19 +191,17 @@ export default function NewLocationPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="country">Country *</Label>
-                  <Select required>
+                  <Label htmlFor="country">Country</Label>
+                  <Select value={countryCode} onValueChange={setCountryCode}>
                     <SelectTrigger id="country">
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="us">United States</SelectItem>
-                      <SelectItem value="ca">Canada</SelectItem>
-                      <SelectItem value="uk">United Kingdom</SelectItem>
-                      <SelectItem value="au">Australia</SelectItem>
-                      <SelectItem value="de">Germany</SelectItem>
-                      <SelectItem value="fr">France</SelectItem>
-                      <SelectItem value="in">India</SelectItem>
+                      {COUNTRY_OPTIONS.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -154,11 +209,7 @@ export default function NewLocationPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+1 (555) 123-4567"
-                    />
+                    <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Contact Email</Label>

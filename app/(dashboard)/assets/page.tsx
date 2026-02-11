@@ -1,7 +1,5 @@
 import { AppHeader } from "@/components/app-header";
-import { AssetsTable } from "@/components/assets/assets-table";
-import { AssetsFilters } from "@/components/assets/assets-filters";
-import { CreateAssetDialog } from "@/components/assets/create-asset-dialog";
+import { AssetsView } from "@/components/assets/assets-view";
 
 export default function AssetsPage() {
   return (
@@ -13,20 +11,7 @@ export default function AssetsPage() {
         ]}
       />
       <div className="flex flex-1 flex-col gap-6 p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-balance">
-              Assets
-            </h1>
-            <p className="text-muted-foreground">
-              View and manage all organizational assets
-            </p>
-          </div>
-          <CreateAssetDialog />
-        </div>
-
-        <AssetsFilters />
-        <AssetsTable />
+        <AssetsView />
       </div>
     </>
   );

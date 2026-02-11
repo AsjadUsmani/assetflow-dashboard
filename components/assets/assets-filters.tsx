@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, SlidersHorizontal, X, Download, Upload } from "lucide-react";
+import { Search, X, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,27 +18,34 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { locations, departments, assetTypes } from "@/lib/mock-data";
+import type { AssetsFiltersState } from "./assets-view";
+import type { AssetType } from "@/lib/services/asset-types";
+import type { Location } from "@/lib/services/locations";
+import type { Department } from "@/lib/services/departments";
 
-export function AssetsFilters() {
+export function AssetsFilters({
+  filters,
+  onFiltersChange,
+  assetTypes,
+  locations,
+  departments,
+}: {
+  filters: AssetsFiltersState;
+  onFiltersChange: (f: AssetsFiltersState) => void;
+  assetTypes: AssetType[];
+  locations: Location[];
+  departments: Department[];
+}) {
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({
-    category: "",
-    status: "",
-    location: "",
-    department: "",
-    assetType: "",
-  });
 
-  const activeFilters = Object.entries(filters).filter(([_, value]) => value);
+  const activeFilters = Object.entries(filters).filter(([, value]) => value);
 
-  const clearFilter = (key: string) => {
-    setFilters((prev) => ({ ...prev, [key]: "" }));
+  const clearFilter = (key: keyof AssetsFiltersState) => {
+    onFiltersChange({ ...filters, [key]: "" });
   };
 
   const clearAllFilters = () => {
-    setFilters({
-      category: "",
+    onFiltersChange({
       status: "",
       location: "",
       department: "",
@@ -61,27 +68,8 @@ export function AssetsFilters() {
         </div>
 
         <Select
-          value={filters.category}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, category: value }))
-          }
-        >
-          <SelectTrigger className="w-36 bg-secondary border-0">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="physical">Physical</SelectItem>
-            <SelectItem value="digital">Digital</SelectItem>
-            <SelectItem value="consumable">Consumable</SelectItem>
-            <SelectItem value="rechargeable">Rechargeable</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
           value={filters.status}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, status: value }))
-          }
+          onValueChange={(value) => onFiltersChange({ ...filters, status: value })}
         >
           <SelectTrigger className="w-36 bg-secondary border-0">
             <SelectValue placeholder="Status" />
@@ -97,16 +85,14 @@ export function AssetsFilters() {
 
         <Select
           value={filters.location}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, location: value }))
-          }
+          onValueChange={(value) => onFiltersChange({ ...filters, location: value })}
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
             <SelectValue placeholder="Location" />
           </SelectTrigger>
           <SelectContent>
             {locations.map((loc) => (
-              <SelectItem key={loc.id} value={loc.id}>
+              <SelectItem key={loc.id} value={String(loc.id)}>
                 {loc.name}
               </SelectItem>
             ))}
@@ -115,16 +101,14 @@ export function AssetsFilters() {
 
         <Select
           value={filters.department}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, department: value }))
-          }
+          onValueChange={(value) => onFiltersChange({ ...filters, department: value })}
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
             <SelectValue placeholder="Department" />
           </SelectTrigger>
           <SelectContent>
             {departments.map((dept) => (
-              <SelectItem key={dept.id} value={dept.id}>
+              <SelectItem key={dept.id} value={String(dept.id)}>
                 {dept.name}
               </SelectItem>
             ))}
@@ -133,16 +117,14 @@ export function AssetsFilters() {
 
         <Select
           value={filters.assetType}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, assetType: value }))
-          }
+          onValueChange={(value) => onFiltersChange({ ...filters, assetType: value })}
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
             <SelectValue placeholder="Asset Type" />
           </SelectTrigger>
           <SelectContent>
             {assetTypes.map((type) => (
-              <SelectItem key={type.id} value={type.id}>
+              <SelectItem key={type.id} value={String(type.id)}>
                 {type.name}
               </SelectItem>
             ))}
@@ -163,7 +145,6 @@ export function AssetsFilters() {
               <DropdownMenuItem>Export as Excel</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
           <Button variant="outline" size="sm">
             <Upload className="mr-2 size-4" />
             Import
@@ -174,61 +155,35 @@ export function AssetsFilters() {
       {(activeFilters.length > 0 || search) && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">Active filters:</span>
-
           {search && (
-            <Badge
-              variant="secondary"
-              className="gap-1 pr-1 bg-primary/20 text-primary"
-            >
+            <Badge variant="secondary" className="gap-1 pr-1 bg-primary/20 text-primary">
               Search: {search}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-4 p-0 hover:bg-transparent"
-                onClick={() => setSearch("")}
-              >
+              <Button variant="ghost" size="icon" className="size-4 p-0 hover:bg-transparent" onClick={() => setSearch("")}>
                 <X className="size-3" />
               </Button>
             </Badge>
           )}
-
           {activeFilters.map(([key, value]) => {
-            let label = value;
+            let label: string = String(value);
             if (key === "location") {
-              label = locations.find((l) => l.id === value)?.name || value;
+              label = locations.find((l) => String(l.id) === value)?.name ?? value;
             } else if (key === "department") {
-              label = departments.find((d) => d.id === value)?.name || value;
+              label = departments.find((d) => String(d.id) === value)?.name ?? value;
             } else if (key === "assetType") {
-              label = assetTypes.find((t) => t.id === value)?.name || value;
+              label = assetTypes.find((t) => String(t.id) === value)?.name ?? value;
             } else {
-              label = value.replace("_", " ");
+              label = String(value).replace("_", " ");
             }
-
             return (
-              <Badge
-                key={key}
-                variant="secondary"
-                className="gap-1 pr-1 bg-primary/20 text-primary capitalize"
-              >
+              <Badge key={key} variant="secondary" className="gap-1 pr-1 bg-primary/20 text-primary capitalize">
                 {key}: {label}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-4 p-0 hover:bg-transparent"
-                  onClick={() => clearFilter(key)}
-                >
+                <Button variant="ghost" size="icon" className="size-4 p-0 hover:bg-transparent" onClick={() => clearFilter(key as keyof AssetsFiltersState)}>
                   <X className="size-3" />
                 </Button>
               </Badge>
             );
           })}
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearAllFilters}
-            className="text-muted-foreground hover:text-foreground h-auto py-1"
-          >
+          <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-muted-foreground hover:text-foreground h-auto py-1">
             Clear all
           </Button>
         </div>

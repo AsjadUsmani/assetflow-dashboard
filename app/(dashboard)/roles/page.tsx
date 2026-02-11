@@ -1,28 +1,156 @@
-import { AppHeader } from "@/components/app-header";
-import { RolesList } from "@/components/roles/roles-list";
+"use client"
+
+import * as React from "react"
+import Link from "next/link"
+import { Shield, Plus, BadgeCheck } from "lucide-react"
+
+import { AppHeader } from "@/components/app-header"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { apiService } from "@/lib/services/api-service"
+
+type Role = {
+  id: number
+  name: string
+  description: string | null
+  is_active: boolean
+}
 
 export default function RolesPage() {
+  const [search, setSearch] = React.useState("")
+  const [roles, setRoles] = React.useState<Role[]>([])
+
+  React.useEffect(() => {
+    const controller = new AbortController()
+
+    async function load() {
+      try {
+        const res = await apiService.get<Role[]>("/workspace/roles")
+        if (!controller.signal.aborted && res.data) {
+          const items = res.data
+          const term = search.trim().toLowerCase()
+          setRoles(
+            term
+              ? items.filter((r) =>
+                  `${r.name} ${r.description ?? ""}`
+                    .toLowerCase()
+                    .includes(term),
+                )
+              : items,
+          )
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setRoles([])
+        }
+      }
+    }
+
+    void load()
+    return () => controller.abort()
+  }, [search])
+
   return (
     <>
       <AppHeader
         breadcrumbs={[
-          { label: "Home", href: "/dashboard" },
-          { label: "Roles & Permissions" },
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Roles" },
         ]}
       />
-      <main className="flex-1 overflow-auto">
-        <div className="container py-6 space-y-6">
+      <div className="flex-1 space-y-6 p-6">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
               Roles & Permissions
             </h1>
             <p className="text-muted-foreground">
-              Manage role-based access controls for your organization
+              Manage system roles and their access to menus and operations.
             </p>
           </div>
-          <RolesList />
+          <Button asChild>
+            <Link href="/roles/create">
+              <Plus className="mr-2 size-4" />
+              New Role
+            </Link>
+          </Button>
         </div>
-      </main>
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Input
+              placeholder="Search by role or description..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-[80px] text-right">
+                  Permissions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {roles.map((role) => (
+                <TableRow key={role.id}>
+                  <TableCell>{role.id}</TableCell>
+                  <TableCell className="font-medium">{role.name}</TableCell>
+                  <TableCell className="max-w-[260px] truncate text-sm text-muted-foreground">
+                    {role.description ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={role.is_active ? "default" : "secondary"}>
+                      {role.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Edit permissions"
+                    >
+                      <Link href={`/roles/${role.id}/permissions`}>
+                        <Shield className="size-4" />
+                      </Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {roles.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                      <BadgeCheck className="size-5" />
+                      <span>No roles found</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
     </>
-  );
+  )
 }
+

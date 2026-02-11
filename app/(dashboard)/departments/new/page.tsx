@@ -1,8 +1,6 @@
 "use client";
 
-import React from "react"
-
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, FolderTree } from "lucide-react";
@@ -26,17 +24,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { locations, users } from "@/lib/mock-data";
+import { getLocations } from "@/lib/services/locations";
+import { createDepartment } from "@/lib/services/departments";
+import type { Location } from "@/lib/services/locations";
 
 export default function NewDepartmentPage() {
   const router = useRouter();
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [locationId, setLocationId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getLocations()
+      .then(setLocations)
+      .catch(() => setLocations([]));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    const locId = Number(locationId);
+    if (Number.isNaN(locId) || !locationId) {
+      setError("Please select a location");
+      return;
+    }
+    const form = e.currentTarget;
+    const name = (form.querySelector("#name") as HTMLInputElement).value.trim();
+    const code = (form.querySelector("#code") as HTMLInputElement)?.value?.trim() || undefined;
+    const phone = (form.querySelector("#phone") as HTMLInputElement)?.value?.trim() || undefined;
+    const email = (form.querySelector("#email") as HTMLInputElement)?.value?.trim() || undefined;
+    const description = (form.querySelector("#description") as HTMLTextAreaElement)?.value?.trim() || undefined;
+
+    if (!name) return;
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    router.push("/departments");
+    try {
+      await createDepartment({
+        location_id: locId,
+        name,
+        code,
+        phone,
+        email,
+        description,
+      });
+      router.push("/departments");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create department");
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -82,16 +117,17 @@ export default function NewDepartmentPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <div className="space-y-2">
                   <Label htmlFor="location">Location *</Label>
-                  <Select required>
+                  <Select value={locationId} onValueChange={setLocationId} required>
                     <SelectTrigger id="location">
                       <SelectValue placeholder="Select location" />
                     </SelectTrigger>
                     <SelectContent>
                       {locations.map((loc) => (
-                        <SelectItem key={loc.id} value={loc.id}>
-                          {loc.name}
+                        <SelectItem key={loc.id} value={String(loc.id)}>
+                          {loc.name} ({loc.organization_name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -108,27 +144,9 @@ export default function NewDepartmentPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="code">Department Code *</Label>
-                    <Input id="code" placeholder="e.g., RAD" required />
+                    <Label htmlFor="code">Department Code</Label>
+                    <Input id="code" placeholder="e.g., RAD" />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="hod">Head of Department</Label>
-                  <Select>
-                    <SelectTrigger id="hod">
-                      <SelectValue placeholder="Select HOD (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users
-                        .filter((u) => u.role === "hod" || u.role === "org_admin")
-                        .map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">

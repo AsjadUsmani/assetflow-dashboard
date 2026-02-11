@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   MapPin,
@@ -39,16 +39,63 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { locations, organizations } from "@/lib/mock-data";
+import {
+  getLocations,
+  deleteLocation,
+  type Location,
+} from "@/lib/services/locations";
 
 export default function LocationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getLocations()
+      .then((data) => {
+        if (!cancelled) setLocations(data);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to load locations");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredLocations = locations.filter(
-    (location) =>
-      location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      location.address.toLowerCase().includes(searchQuery.toLowerCase())
+    (loc) =>
+      loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (loc.address && loc.address.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const handleDelete = async (id: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!confirm("Are you sure you want to delete this location?")) return;
+    try {
+      await deleteLocation(id);
+      setLocations((prev) => prev.filter((l) => l.id !== id));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+    }
+  };
+
+  if (error) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Locations" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-destructive">{error}</p>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -83,8 +130,9 @@ export default function LocationsPage() {
                 <div>
                   <CardTitle className="text-base">All Locations</CardTitle>
                   <CardDescription>
-                    {filteredLocations.length} location
-                    {filteredLocations.length !== 1 ? "s" : ""} found
+                    {loading
+                      ? "Loading..."
+                      : `${filteredLocations.length} location${filteredLocations.length !== 1 ? "s" : ""} found`}
                   </CardDescription>
                 </div>
                 <div className="relative w-full sm:w-64">
@@ -111,11 +159,20 @@ export default function LocationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLocations.map((location) => {
-                    const org = organizations.find(
-                      (o) => o.id === location.organizationId
-                    );
-                    return (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredLocations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        No locations found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredLocations.map((location) => (
                       <TableRow key={location.id}>
                         <TableCell>
                           <Link
@@ -131,7 +188,7 @@ export default function LocationsPage() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Building2 className="size-4 text-muted-foreground" />
-                            <span>{org?.name || "Unknown"}</span>
+                            <span>{location.organization_name ?? "—"}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
@@ -139,13 +196,11 @@ export default function LocationsPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">
-                            {Math.floor(Math.random() * 8) + 2} depts
+                            {location.departments_count ?? 0} depts
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">
-                            {Math.floor(Math.random() * 200) + 50} assets
-                          </Badge>
+                          <Badge variant="outline">—</Badge>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -168,7 +223,10 @@ export default function LocationsPage() {
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive">
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={(e) => handleDelete(location.id, e)}
+                              >
                                 <Trash2 className="mr-2 size-4" />
                                 Delete
                               </DropdownMenuItem>
@@ -176,8 +234,8 @@ export default function LocationsPage() {
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

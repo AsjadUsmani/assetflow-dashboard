@@ -41,6 +41,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -161,6 +162,7 @@ function NavItemComponent({ item }: { item: NavItem }) {
 }
 
 export function AppSidebar() {
+  const pathname = usePathname();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const router = useRouter();
@@ -220,22 +222,69 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {menusError && (
-          <div className="px-4 py-2 text-xs text-destructive">
-            {menusError}
-          </div>
-        )}
-        {menuGroups.map(group => (
-          <SidebarGroup key={group.id}>
-            <SidebarGroupLabel>{group.name}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.menus.map(menu => (
-                  <NavItemComponent key={menu.id} item={menuToNavItem(menu)} />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+        {menuGroups.map((group) => (
+          <React.Fragment key={group.id}>
+            <SidebarGroup>
+              <SidebarGroupLabel>{group.name}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.menus.map((item) => {
+                    const Icon =
+                      item.icon && iconMap[item.icon]
+                        ? iconMap[item.icon]
+                        : LayoutDashboard
+
+                    return item.children.length > 0 ? (
+                      <Collapsible key={item.id} asChild defaultOpen>
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton
+                              isActive={pathname.startsWith(item.path)}
+                              tooltip={item.label ?? item.path}
+                            >
+                              <Icon className="size-4" />
+                              <Link href={item.path}><span>{item.label ?? item.path}</span></Link>
+                              <ChevronDown className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub>
+                              {item.children.map((sub) => (
+                                <SidebarMenuSubItem key={sub.id}>
+                                  <SidebarMenuSubButton
+                                    asChild
+                                    isActive={pathname === sub.path}
+                                  >
+                                    <Link href={sub.path}>
+                                      <span>{sub.label ?? sub.path}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuItem>
+                      </Collapsible>
+                    ) : (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={pathname === item.path}
+                          tooltip={item.label ?? item.path}
+                        >
+                          <Link href={item.path}>
+                            <Icon className="size-4" />
+                            <span>{item.label ?? item.path}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarSeparator />
+          </React.Fragment>
         ))}
       </SidebarContent>
 

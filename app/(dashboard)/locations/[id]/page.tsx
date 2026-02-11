@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   MapPin,
@@ -22,7 +25,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,19 +40,86 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { locations, organizations, departments } from "@/lib/mock-data";
+import { getLocationById, deleteLocation, type Location } from "@/lib/services/locations";
+import { getDepartments } from "@/lib/services/departments";
 
-export default async function LocationDetailPage({
+export default function LocationDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const location = locations.find((l) => l.id === id) || locations[0];
-  const org = organizations.find((o) => o.id === location.organizationId);
-  const locationDepartments = departments.filter(
-    (d) => d.locationId === location.id
-  );
+  const [id, setId] = useState<string | null>(null);
+  const [location, setLocation] = useState<Location | null>(null);
+  const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    params.then((p) => {
+      if (cancelled) return;
+      const numId = Number(p.id);
+      if (Number.isNaN(numId)) {
+        setError("Invalid location id");
+        setLoading(false);
+        return;
+      }
+      setId(p.id);
+      Promise.all([getLocationById(numId), getDepartments()])
+        .then(([loc, depts]) => {
+          if (cancelled) return;
+          setLocation(loc ?? null);
+          setDepartments(
+            depts.filter((d) => d.location_id === numId).map((d) => ({ id: d.id, name: d.name }))
+          );
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
+
+  const handleDelete = async () => {
+    if (!id || !location) return;
+    if (!confirm("Are you sure you want to delete this location?")) return;
+    try {
+      await deleteLocation(location.id);
+      window.location.href = "/locations";
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+    }
+  };
+
+  if (loading || id === null) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Locations", href: "/locations" }, { label: "..." }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-muted-foreground">Loading...</p>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !location) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Locations", href: "/locations" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-destructive">{error ?? "Location not found"}</p>
+          <Button variant="outline" asChild className="mt-4">
+            <Link href="/locations">Back to Locations</Link>
+          </Button>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -98,7 +167,7 @@ export default async function LocationDetailPage({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
                     <Trash2 className="mr-2 size-4" />
                     Delete Location
                   </DropdownMenuItem>
@@ -117,9 +186,7 @@ export default async function LocationDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Users className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">
-                    {locationDepartments.length}
-                  </span>
+                  <span className="text-2xl font-bold">{departments.length}</span>
                 </div>
               </CardContent>
             </Card>
@@ -132,9 +199,7 @@ export default async function LocationDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Package className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">
-                    {Math.floor(Math.random() * 200) + 50}
-                  </span>
+                  <span className="text-2xl font-bold">—</span>
                 </div>
               </CardContent>
             </Card>
@@ -147,9 +212,7 @@ export default async function LocationDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Users className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">
-                    {Math.floor(Math.random() * 50) + 10}
-                  </span>
+                  <span className="text-2xl font-bold">—</span>
                 </div>
               </CardContent>
             </Card>
@@ -167,7 +230,7 @@ export default async function LocationDetailPage({
                   <div>
                     <p className="text-sm font-medium">Organization</p>
                     <p className="text-sm text-muted-foreground">
-                      {org?.name || "Unknown"}
+                      {location.organization_name ?? "—"}
                     </p>
                   </div>
                 </div>
@@ -175,28 +238,21 @@ export default async function LocationDetailPage({
                   <MapPin className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Address</p>
-                    <p className="text-sm text-muted-foreground">
-                      {location.address}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{location.address}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Phone className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Phone</p>
-                    <p className="text-sm text-muted-foreground">
-                      +1 (555) 123-4567
-                    </p>
+                    <p className="text-sm text-muted-foreground">{location.phone ?? "—"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Mail className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Email</p>
-                    <p className="text-sm text-muted-foreground">
-                      {location.name.toLowerCase().replace(/\s/g, "")}
-                      @example.com
-                    </p>
+                    <p className="text-sm text-muted-foreground">{location.email ?? "—"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -204,7 +260,7 @@ export default async function LocationDetailPage({
                   <div>
                     <p className="text-sm font-medium">Created</p>
                     <p className="text-sm text-muted-foreground">
-                      January 15, 2024
+                      {new Date(location.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -216,9 +272,7 @@ export default async function LocationDetailPage({
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Departments</CardTitle>
-                    <CardDescription>
-                      Departments at this location
-                    </CardDescription>
+                    <CardDescription>Departments at this location</CardDescription>
                   </div>
                   <Button size="sm" variant="outline" asChild>
                     <Link href="/departments/new">Add Department</Link>
@@ -226,7 +280,7 @@ export default async function LocationDetailPage({
                 </div>
               </CardHeader>
               <CardContent>
-                {locationDepartments.length > 0 ? (
+                {departments.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -236,7 +290,7 @@ export default async function LocationDetailPage({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {locationDepartments.slice(0, 5).map((dept) => (
+                      {departments.slice(0, 5).map((dept) => (
                         <TableRow key={dept.id}>
                           <TableCell>
                             <Link
@@ -246,12 +300,8 @@ export default async function LocationDetailPage({
                               {dept.name}
                             </Link>
                           </TableCell>
-                          <TableCell>
-                            {Math.floor(Math.random() * 50) + 5}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">Active</Badge>
-                          </TableCell>
+                          <TableCell>—</TableCell>
+                          <TableCell>Active</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -259,9 +309,7 @@ export default async function LocationDetailPage({
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <Users className="mb-2 size-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      No departments yet
-                    </p>
+                    <p className="text-sm text-muted-foreground">No departments yet</p>
                     <Button size="sm" className="mt-4" asChild>
                       <Link href="/departments/new">Add First Department</Link>
                     </Button>

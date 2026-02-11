@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Building2,
@@ -39,16 +42,89 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { organizations, locations } from "@/lib/mock-data";
+import {
+  getOrganizationById,
+  deleteOrganization,
+  type Organization,
+} from "@/lib/services/organizations";
+import { getLocations, type Location } from "@/lib/services/locations";
 
-export default async function OrganizationDetailPage({
+export default function OrganizationDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const org = organizations.find((o) => o.id === id) || organizations[0];
-  const orgLocations = locations.filter((l) => l.organizationId === org.id);
+  const [id, setId] = useState<string | null>(null);
+  const [org, setOrg] = useState<Organization | null>(null);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    params.then((p) => {
+      if (cancelled) return;
+      const numId = Number(p.id);
+      if (Number.isNaN(numId)) {
+        setError("Invalid organization id");
+        setLoading(false);
+        return;
+      }
+      setId(p.id);
+      Promise.all([getOrganizationById(numId), getLocations()])
+        .then(([o, locs]) => {
+          if (cancelled) return;
+          setOrg(o ?? null);
+          setLocations(locs.filter((l) => l.organization_id === numId));
+        })
+        .catch((err) => {
+          if (!cancelled)
+            setError(err instanceof Error ? err.message : "Failed to load");
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
+
+  const handleDelete = async () => {
+    if (!id || !org) return;
+    if (!confirm("Are you sure you want to delete this organization?")) return;
+    try {
+      await deleteOrganization(org.id);
+      window.location.href = "/organizations";
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+    }
+  };
+
+  if (loading || id === null) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Organizations", href: "/organizations" }, { label: "..." }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-muted-foreground">Loading...</p>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !org) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Organizations", href: "/organizations" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-destructive">{error ?? "Organization not found"}</p>
+          <Button variant="outline" asChild className="mt-4">
+            <Link href="/organizations">Back to Organizations</Link>
+          </Button>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -83,7 +159,7 @@ export default async function OrganizationDetailPage({
                       {org.status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{org.industry}</p>
+                  <p className="text-sm text-muted-foreground">{org.industry ?? "—"}</p>
                 </div>
               </div>
             </div>
@@ -101,7 +177,7 @@ export default async function OrganizationDetailPage({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
                     <Trash2 className="mr-2 size-4" />
                     Delete Organization
                   </DropdownMenuItem>
@@ -120,7 +196,7 @@ export default async function OrganizationDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <MapPin className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">{orgLocations.length}</span>
+                  <span className="text-2xl font-bold">{locations.length}</span>
                 </div>
               </CardContent>
             </Card>
@@ -133,9 +209,7 @@ export default async function OrganizationDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Users className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">
-                    {Math.floor(Math.random() * 20) + 5}
-                  </span>
+                  <span className="text-2xl font-bold">—</span>
                 </div>
               </CardContent>
             </Card>
@@ -148,9 +222,7 @@ export default async function OrganizationDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Package className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">
-                    {Math.floor(Math.random() * 500) + 100}
-                  </span>
+                  <span className="text-2xl font-bold">—</span>
                 </div>
               </CardContent>
             </Card>
@@ -163,9 +235,7 @@ export default async function OrganizationDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Users className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">
-                    {Math.floor(Math.random() * 100) + 20}
-                  </span>
+                  <span className="text-2xl font-bold">—</span>
                 </div>
               </CardContent>
             </Card>
@@ -182,34 +252,28 @@ export default async function OrganizationDetailPage({
                   <Building2 className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Industry</p>
-                    <p className="text-sm text-muted-foreground">{org.industry}</p>
+                    <p className="text-sm text-muted-foreground">{org.industry ?? "—"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Mail className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Email</p>
-                    <p className="text-sm text-muted-foreground">
-                      admin@{org.name.toLowerCase().replace(/\s/g, "")}.com
-                    </p>
+                    <p className="text-sm text-muted-foreground">{org.email ?? "—"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Phone className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Phone</p>
-                    <p className="text-sm text-muted-foreground">
-                      +1 (555) 123-4567
-                    </p>
+                    <p className="text-sm text-muted-foreground">{org.phone ?? "—"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Globe className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Website</p>
-                    <p className="text-sm text-muted-foreground">
-                      https://{org.name.toLowerCase().replace(/\s/g, "")}.com
-                    </p>
+                    <p className="text-sm text-muted-foreground">{org.website ?? "—"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -217,7 +281,7 @@ export default async function OrganizationDetailPage({
                   <div>
                     <p className="text-sm font-medium">Created</p>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(org.createdAt).toLocaleDateString()}
+                      {new Date(org.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -239,7 +303,7 @@ export default async function OrganizationDetailPage({
                 </div>
               </CardHeader>
               <CardContent>
-                {orgLocations.length > 0 ? (
+                {locations.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -248,7 +312,7 @@ export default async function OrganizationDetailPage({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {orgLocations.slice(0, 5).map((location) => (
+                      {locations.slice(0, 5).map((location) => (
                         <TableRow key={location.id}>
                           <TableCell>
                             <Link

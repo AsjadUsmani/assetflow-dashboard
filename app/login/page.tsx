@@ -82,7 +82,7 @@ export default function LoginPage() {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="santosh"
+                  placeholder="Enter your username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -140,7 +140,7 @@ export default function LoginPage() {
                   htmlFor="remember"
                   className="text-sm font-normal text-muted-foreground cursor-pointer"
                 >
-                  Remember me for 30 days
+                  Remember me
                 </Label>
               </div>
               {error && (

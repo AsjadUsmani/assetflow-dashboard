@@ -1,8 +1,6 @@
 "use client";
 
-import React from "react"
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
@@ -26,16 +24,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { createOrganization } from "@/lib/services/organizations";
 
 export default function NewOrganizationPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [industry, setIndustry] = useState<string>("");
+  const [status, setStatus] = useState<string>("active");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    const form = e.currentTarget;
+    const name = (form.querySelector("#name") as HTMLInputElement).value.trim();
+    const email = (form.querySelector("#email") as HTMLInputElement)?.value?.trim() || undefined;
+    const phone = (form.querySelector("#phone") as HTMLInputElement)?.value?.trim() || undefined;
+    const website = (form.querySelector("#website") as HTMLInputElement)?.value?.trim() || undefined;
+    const description = (form.querySelector("#description") as HTMLTextAreaElement)?.value?.trim() || undefined;
+
+    if (!name) return;
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    router.push("/organizations");
+    try {
+      await createOrganization({
+        name,
+        industry: industry || undefined,
+        status: status || "active",
+        email,
+        phone,
+        website,
+        description,
+      });
+      router.push("/organizations");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create organization");
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -81,10 +105,14 @@ export default function NewOrganizationPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {error && (
+                  <p className="text-sm text-destructive">{error}</p>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="name">Organization Name *</Label>
                   <Input
                     id="name"
+                    name="name"
                     placeholder="e.g., Acme Corporation"
                     required
                   />
@@ -92,8 +120,8 @@ export default function NewOrganizationPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="industry">Industry *</Label>
-                    <Select required>
+                    <Label htmlFor="industry">Industry</Label>
+                    <Select value={industry} onValueChange={setIndustry}>
                       <SelectTrigger id="industry">
                         <SelectValue placeholder="Select industry" />
                       </SelectTrigger>
@@ -111,7 +139,7 @@ export default function NewOrganizationPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
-                    <Select defaultValue="active">
+                    <Select value={status} onValueChange={setStatus}>
                       <SelectTrigger id="status">
                         <SelectValue />
                       </SelectTrigger>
@@ -126,18 +154,19 @@ export default function NewOrganizationPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Primary Email *</Label>
+                    <Label htmlFor="email">Primary Email</Label>
                     <Input
                       id="email"
+                      name="email"
                       type="email"
                       placeholder="admin@example.com"
-                      required
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input
                       id="phone"
+                      name="phone"
                       type="tel"
                       placeholder="+1 (555) 123-4567"
                     />
@@ -148,6 +177,7 @@ export default function NewOrganizationPage() {
                   <Label htmlFor="website">Website</Label>
                   <Input
                     id="website"
+                    name="website"
                     type="url"
                     placeholder="https://example.com"
                   />
@@ -157,6 +187,7 @@ export default function NewOrganizationPage() {
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
+                    name="description"
                     placeholder="Brief description of the organization..."
                     rows={3}
                   />

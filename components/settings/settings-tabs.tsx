@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import {
   Building2,
   MapPin,
@@ -7,8 +8,6 @@ import {
   Palette,
   Lock,
   Database,
-  Globe,
-  CreditCard,
 } from "lucide-react";
 import {
   Card,
@@ -31,8 +30,79 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import {
+  getOrganizations,
+  updateOrganization,
+  createOrganization,
+  type Organization,
+} from "@/lib/services/organizations";
 
 export function SettingsTabs() {
+  const [org, setOrg] = useState<Organization | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [industry, setIndustry] = useState("");
+  const [status, setStatus] = useState("active");
+
+  useEffect(() => {
+    getOrganizations()
+      .then((list) => {
+        const first = list[0] ?? null;
+        setOrg(first);
+        if (first) {
+          setIndustry(first.industry ?? "");
+          setStatus(first.status ?? "active");
+        }
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSaveOrganization = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    const form = e.currentTarget;
+    const name = (form.querySelector("#org-name") as HTMLInputElement).value.trim();
+    const email = (form.querySelector("#org-email") as HTMLInputElement)?.value?.trim() || undefined;
+    const phone = (form.querySelector("#org-phone") as HTMLInputElement)?.value?.trim() || undefined;
+    const website = (form.querySelector("#org-website") as HTMLInputElement)?.value?.trim() || undefined;
+    const description = (form.querySelector("#org-description") as HTMLTextAreaElement)?.value?.trim() || undefined;
+    if (!name) return;
+    setSaving(true);
+    try {
+      if (org) {
+        await updateOrganization(org.id, {
+          name,
+          industry: industry || undefined,
+          status: status || "active",
+          email,
+          phone,
+          website,
+          description,
+        });
+        setOrg((prev) => (prev ? { ...prev, name, industry: industry || null, status, email: email ?? null, phone: phone ?? null, website: website ?? null, description: description ?? null } : null));
+      } else {
+        const created = await createOrganization({
+          name,
+          industry: industry || undefined,
+          status: status || "active",
+          email,
+          phone,
+          website,
+          description,
+        });
+        setOrg(created);
+        setIndustry(created.industry ?? "");
+        setStatus(created.status ?? "active");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Tabs defaultValue="organization" className="space-y-6">
       <TabsList className="bg-secondary flex-wrap h-auto gap-1 p-1">
@@ -61,64 +131,108 @@ export function SettingsTabs() {
       <TabsContent value="organization" className="space-y-6">
         <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-base">Organization Details</CardTitle>
+            <CardTitle className="text-base">Organization</CardTitle>
             <CardDescription>
-              Basic information about your organization
+              Single organization for this tenant. Edit details below.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="org-name">Organization Name</Label>
-                <Input id="org-name" defaultValue="Acme Corporation" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="org-code">Organization Code</Label>
-                <Input id="org-code" defaultValue="ACME-001" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="industry">Industry</Label>
-                <Select defaultValue="technology">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="technology">Technology</SelectItem>
-                    <SelectItem value="healthcare">Healthcare</SelectItem>
-                    <SelectItem value="education">Education</SelectItem>
-                    <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                    <SelectItem value="retail">Retail</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <Select defaultValue="utc-8">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select timezone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="utc-8">
-                      Pacific Time (UTC-8)
-                    </SelectItem>
-                    <SelectItem value="utc-5">Eastern Time (UTC-5)</SelectItem>
-                    <SelectItem value="utc">UTC</SelectItem>
-                    <SelectItem value="utc+1">
-                      Central European (UTC+1)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Textarea
-                id="address"
-                defaultValue="123 Business Ave, Suite 100&#10;San Francisco, CA 94102"
-                rows={2}
-              />
-            </div>
-            <Button>Save Changes</Button>
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : (
+              <form onSubmit={handleSaveOrganization} className="space-y-4">
+                {error && (
+                  <p className="text-sm text-destructive">{error}</p>
+                )}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="org-name">Organization Name *</Label>
+                    <Input
+                      id="org-name"
+                      key={org?.id ?? "new"}
+                      defaultValue={org?.name ?? ""}
+                      placeholder="e.g. Acme Corporation"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="industry">Industry</Label>
+                    <Select value={industry} onValueChange={setIndustry}>
+                      <SelectTrigger id="industry">
+                        <SelectValue placeholder="Select industry" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="technology">Technology</SelectItem>
+                        <SelectItem value="healthcare">Healthcare</SelectItem>
+                        <SelectItem value="education">Education</SelectItem>
+                        <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                        <SelectItem value="retail">Retail</SelectItem>
+                        <SelectItem value="finance">Finance</SelectItem>
+                        <SelectItem value="government">Government</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="org-status">Status</Label>
+                    <Select value={status} onValueChange={setStatus}>
+                      <SelectTrigger id="org-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="org-email">Email</Label>
+                    <Input
+                      id="org-email"
+                      type="email"
+                      key={`email-${org?.id ?? "new"}`}
+                      defaultValue={org?.email ?? ""}
+                      placeholder="admin@example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="org-phone">Phone</Label>
+                    <Input
+                      id="org-phone"
+                      type="tel"
+                      key={`phone-${org?.id ?? "new"}`}
+                      defaultValue={org?.phone ?? ""}
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="org-website">Website</Label>
+                  <Input
+                    id="org-website"
+                    type="url"
+                    key={`website-${org?.id ?? "new"}`}
+                    defaultValue={org?.website ?? ""}
+                    placeholder="https://example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="org-description">Description</Label>
+                  <Textarea
+                    id="org-description"
+                    key={`desc-${org?.id ?? "new"}`}
+                    defaultValue={org?.description ?? ""}
+                    placeholder="Brief description of the organization"
+                    rows={3}
+                  />
+                </div>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving..." : "Save organization"}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
 

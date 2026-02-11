@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MapPin } from "lucide-react";
@@ -24,22 +24,118 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { locations, organizations } from "@/lib/mock-data";
+import { getOrganizations } from "@/lib/services/organizations";
+import { getLocationById, updateLocation } from "@/lib/services/locations";
+import type { Location } from "@/lib/services/locations";
+import type { Organization } from "@/lib/services/organizations";
+
+const COUNTRY_OPTIONS = [
+  { value: "us", label: "United States" },
+  { value: "ca", label: "Canada" },
+  { value: "uk", label: "United Kingdom" },
+  { value: "au", label: "Australia" },
+  { value: "de", label: "Germany" },
+  { value: "fr", label: "France" },
+  { value: "in", label: "India" },
+];
 
 export default function EditLocationPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const location = locations.find((l) => l.id === id) || locations[0];
+  const [location, setLocation] = useState<Location | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizationId, setOrganizationId] = useState<string>("");
+  const [countryCode, setCountryCode] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const numId = Number(id);
+    if (Number.isNaN(numId)) {
+      setError("Invalid id");
+      setLoading(false);
+      return;
+    }
+    Promise.all([getLocationById(numId), getOrganizations()])
+      .then(([loc, orgs]) => {
+        setLocation(loc ?? null);
+        setOrganizations(orgs);
+        if (loc) {
+          setOrganizationId(String(loc.organization_id));
+          setCountryCode(loc.country_code ?? "");
+        }
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!location) return;
+    setError(null);
+    const form = e.currentTarget;
+    const orgId = Number(organizationId);
+    if (Number.isNaN(orgId)) {
+      setError("Please select an organization");
+      return;
+    }
+    const name = (form.querySelector("#name") as HTMLInputElement).value.trim();
+    const address = (form.querySelector("#address") as HTMLInputElement).value.trim();
+    if (!name || !address) return;
+    const city = (form.querySelector("#city") as HTMLInputElement)?.value?.trim() || undefined;
+    const state = (form.querySelector("#state") as HTMLInputElement)?.value?.trim() || undefined;
+    const postal_code = (form.querySelector("#zip") as HTMLInputElement)?.value?.trim() || undefined;
+    const phone = (form.querySelector("#phone") as HTMLInputElement)?.value?.trim() || undefined;
+    const email = (form.querySelector("#email") as HTMLInputElement)?.value?.trim() || undefined;
+    const notes = (form.querySelector("#notes") as HTMLTextAreaElement)?.value?.trim() || undefined;
+
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    router.push(`/locations/${id}`);
+    try {
+      await updateLocation(location.id, {
+        organization_id: orgId,
+        name,
+        address,
+        city,
+        state,
+        postal_code,
+        country_code: countryCode || undefined,
+        phone,
+        email,
+        notes,
+      });
+      router.push(`/locations/${id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+      setIsSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Locations", href: "/locations" }, { label: "Edit" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-muted-foreground">Loading...</p>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !location) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Locations", href: "/locations" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-destructive">{error ?? "Location not found"}</p>
+          <Button variant="outline" asChild className="mt-4">
+            <Link href="/locations">Back to Locations</Link>
+          </Button>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -85,16 +181,17 @@ export default function EditLocationPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="organization">Organization *</Label>
-                    <Select defaultValue={location.organizationId} required>
+                    <Select value={organizationId} onValueChange={setOrganizationId} required>
                       <SelectTrigger id="organization">
                         <SelectValue placeholder="Select organization" />
                       </SelectTrigger>
                       <SelectContent>
                         {organizations.map((org) => (
-                          <SelectItem key={org.id} value={org.id}>
+                          <SelectItem key={org.id} value={String(org.id)}>
                             {org.name}
                           </SelectItem>
                         ))}
@@ -103,52 +200,42 @@ export default function EditLocationPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="name">Location Name *</Label>
-                    <Input
-                      id="name"
-                      defaultValue={location.name}
-                      required
-                    />
+                    <Input id="name" defaultValue={location.name} required />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="address">Street Address *</Label>
-                  <Input
-                    id="address"
-                    defaultValue={location.address}
-                    required
-                  />
+                  <Input id="address" defaultValue={location.address} required />
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="city">City *</Label>
-                    <Input id="city" defaultValue="New York" required />
+                    <Label htmlFor="city">City</Label>
+                    <Input id="city" defaultValue={location.city ?? ""} placeholder="City" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="state">State/Province</Label>
-                    <Input id="state" defaultValue="NY" />
+                    <Input id="state" defaultValue={location.state ?? ""} placeholder="State" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="zip">Postal Code</Label>
-                    <Input id="zip" defaultValue="10001" />
+                    <Input id="zip" defaultValue={location.postal_code ?? ""} placeholder="12345" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="country">Country *</Label>
-                  <Select defaultValue="us" required>
+                  <Label htmlFor="country">Country</Label>
+                  <Select value={countryCode} onValueChange={setCountryCode}>
                     <SelectTrigger id="country">
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="us">United States</SelectItem>
-                      <SelectItem value="ca">Canada</SelectItem>
-                      <SelectItem value="uk">United Kingdom</SelectItem>
-                      <SelectItem value="au">Australia</SelectItem>
-                      <SelectItem value="de">Germany</SelectItem>
-                      <SelectItem value="fr">France</SelectItem>
-                      <SelectItem value="in">India</SelectItem>
+                      {COUNTRY_OPTIONS.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -159,7 +246,8 @@ export default function EditLocationPage() {
                     <Input
                       id="phone"
                       type="tel"
-                      defaultValue="+1 (555) 123-4567"
+                      defaultValue={location.phone ?? ""}
+                      placeholder="+1 (555) 123-4567"
                     />
                   </div>
                   <div className="space-y-2">
@@ -167,7 +255,8 @@ export default function EditLocationPage() {
                     <Input
                       id="email"
                       type="email"
-                      defaultValue={`${location.name.toLowerCase().replace(/\s/g, "")}@example.com`}
+                      defaultValue={location.email ?? ""}
+                      placeholder="location@example.com"
                     />
                   </div>
                 </div>
@@ -178,6 +267,7 @@ export default function EditLocationPage() {
                     id="notes"
                     placeholder="Additional information about this location..."
                     rows={3}
+                    defaultValue={location.notes ?? ""}
                   />
                 </div>
 

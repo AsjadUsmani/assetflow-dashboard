@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
@@ -24,21 +24,93 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { organizations } from "@/lib/mock-data";
+import { getOrganizationById, updateOrganization } from "@/lib/services/organizations";
+import type { Organization } from "@/lib/services/organizations";
 
 export default function EditOrganizationPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const org = organizations.find((o) => o.id === id) || organizations[0];
+  const [org, setOrg] = useState<Organization | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [industry, setIndustry] = useState<string>("");
+  const [status, setStatus] = useState<string>("active");
+
+  useEffect(() => {
+    const numId = Number(id);
+    if (Number.isNaN(numId)) {
+      setError("Invalid id");
+      setLoading(false);
+      return;
+    }
+    getOrganizationById(numId)
+      .then((o) => {
+        setOrg(o ?? null);
+        if (o) {
+          setIndustry(o.industry ?? "");
+          setStatus(o.status ?? "active");
+        }
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!org) return;
+    setError(null);
+    const form = e.currentTarget;
+    const name = (form.querySelector("#name") as HTMLInputElement).value.trim();
+    const email = (form.querySelector("#email") as HTMLInputElement)?.value?.trim() || undefined;
+    const phone = (form.querySelector("#phone") as HTMLInputElement)?.value?.trim() || undefined;
+    const website = (form.querySelector("#website") as HTMLInputElement)?.value?.trim() || undefined;
+    const description = (form.querySelector("#description") as HTMLTextAreaElement)?.value?.trim() || undefined;
+
+    if (!name) return;
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    router.push(`/organizations/${id}`);
+    try {
+      await updateOrganization(org.id, {
+        name,
+        industry: industry || undefined,
+        status: status || "active",
+        email,
+        phone,
+        website,
+        description,
+      });
+      router.push(`/organizations/${id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+      setIsSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Organizations", href: "/organizations" }, { label: "Edit" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-muted-foreground">Loading...</p>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !org) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Organizations", href: "/organizations" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-destructive">{error ?? "Organization not found"}</p>
+          <Button variant="outline" asChild className="mt-4">
+            <Link href="/organizations">Back to Organizations</Link>
+          </Button>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -84,6 +156,7 @@ export default function EditOrganizationPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <div className="space-y-2">
                   <Label htmlFor="name">Organization Name *</Label>
                   <Input id="name" defaultValue={org.name} required />
@@ -91,10 +164,10 @@ export default function EditOrganizationPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="industry">Industry *</Label>
-                    <Select defaultValue={org.industry.toLowerCase()} required>
+                    <Label htmlFor="industry">Industry</Label>
+                    <Select value={industry} onValueChange={setIndustry}>
                       <SelectTrigger id="industry">
-                        <SelectValue />
+                        <SelectValue placeholder="Select industry" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="healthcare">Healthcare</SelectItem>
@@ -110,7 +183,7 @@ export default function EditOrganizationPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
-                    <Select defaultValue={org.status}>
+                    <Select value={status} onValueChange={setStatus}>
                       <SelectTrigger id="status">
                         <SelectValue />
                       </SelectTrigger>
@@ -125,12 +198,12 @@ export default function EditOrganizationPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Primary Email *</Label>
+                    <Label htmlFor="email">Primary Email</Label>
                     <Input
                       id="email"
                       type="email"
-                      defaultValue={`admin@${org.name.toLowerCase().replace(/\s/g, "")}.com`}
-                      required
+                      defaultValue={org.email ?? ""}
+                      placeholder="admin@example.com"
                     />
                   </div>
                   <div className="space-y-2">
@@ -138,7 +211,8 @@ export default function EditOrganizationPage() {
                     <Input
                       id="phone"
                       type="tel"
-                      defaultValue="+1 (555) 123-4567"
+                      defaultValue={org.phone ?? ""}
+                      placeholder="+1 (555) 123-4567"
                     />
                   </div>
                 </div>
@@ -148,7 +222,8 @@ export default function EditOrganizationPage() {
                   <Input
                     id="website"
                     type="url"
-                    defaultValue={`https://${org.name.toLowerCase().replace(/\s/g, "")}.com`}
+                    defaultValue={org.website ?? ""}
+                    placeholder="https://example.com"
                   />
                 </div>
 
@@ -158,6 +233,7 @@ export default function EditOrganizationPage() {
                     id="description"
                     placeholder="Brief description of the organization..."
                     rows={3}
+                    defaultValue={org.description ?? ""}
                   />
                 </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Building2,
@@ -40,14 +40,61 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { organizations, locations } from "@/lib/mock-data";
+import {
+  getOrganizations,
+  deleteOrganization,
+  type Organization,
+} from "@/lib/services/organizations";
 
 export default function OrganizationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getOrganizations()
+      .then((data) => {
+        if (!cancelled) setOrganizations(data);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to load organizations");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredOrganizations = organizations.filter((org) =>
     org.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleDelete = async (id: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!confirm("Are you sure you want to delete this organization?")) return;
+    try {
+      await deleteOrganization(id);
+      setOrganizations((prev) => prev.filter((o) => o.id !== id));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+    }
+  };
+
+  if (error) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Organizations" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-destructive">{error}</p>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -82,8 +129,9 @@ export default function OrganizationsPage() {
                 <div>
                   <CardTitle className="text-base">All Organizations</CardTitle>
                   <CardDescription>
-                    {filteredOrganizations.length} organization
-                    {filteredOrganizations.length !== 1 ? "s" : ""} found
+                    {loading
+                      ? "Loading..."
+                      : `${filteredOrganizations.length} organization${filteredOrganizations.length !== 1 ? "s" : ""} found`}
                   </CardDescription>
                 </div>
                 <div className="relative w-full sm:w-64">
@@ -110,11 +158,20 @@ export default function OrganizationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredOrganizations.map((org) => {
-                    const orgLocations = locations.filter(
-                      (l) => l.organizationId === org.id
-                    );
-                    return (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredOrganizations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        No organizations found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredOrganizations.map((org) => (
                       <TableRow key={org.id}>
                         <TableCell>
                           <Link
@@ -133,20 +190,18 @@ export default function OrganizationsPage() {
                           </Link>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {org.industry}
+                          {org.industry ?? "—"}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <MapPin className="size-4 text-muted-foreground" />
-                            <span>{orgLocations.length} locations</span>
+                            <span>{org.locations_count ?? 0} locations</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Users className="size-4 text-muted-foreground" />
-                            <span>
-                              {Math.floor(Math.random() * 50) + 10} users
-                            </span>
+                            <span>—</span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -154,7 +209,7 @@ export default function OrganizationsPage() {
                             variant="outline"
                             className="bg-success/10 text-success border-success/30"
                           >
-                            Active
+                            {org.status === "active" ? "Active" : org.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -178,7 +233,10 @@ export default function OrganizationsPage() {
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive">
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={(e) => handleDelete(org.id, e)}
+                              >
                                 <Trash2 className="mr-2 size-4" />
                                 Delete
                               </DropdownMenuItem>
@@ -186,8 +244,8 @@ export default function OrganizationsPage() {
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

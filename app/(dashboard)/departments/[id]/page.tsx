@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   FolderTree,
@@ -39,19 +42,81 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { departments, locations, users, assets } from "@/lib/mock-data";
+import { getDepartmentById, deleteDepartment } from "@/lib/services/departments";
+import type { Department } from "@/lib/services/departments";
 
-export default async function DepartmentDetailPage({
+export default function DepartmentDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const dept = departments.find((d) => d.id === id) || departments[0];
-  const location = locations.find((l) => l.id === dept.locationId);
-  const deptUsers = users.filter((u) => u.departmentId === dept.id);
-  const deptAssets = assets.filter((a) => a.departmentId === dept.id);
+  const [id, setId] = useState<string | null>(null);
+  const [dept, setDept] = useState<Department | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    params.then((p) => {
+      if (cancelled) return;
+      const numId = Number(p.id);
+      if (Number.isNaN(numId)) {
+        setError("Invalid department id");
+        setLoading(false);
+        return;
+      }
+      setId(p.id);
+      getDepartmentById(numId)
+        .then((d) => {
+          if (!cancelled) setDept(d ?? null);
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
+
+  const handleDelete = async () => {
+    if (!id || !dept) return;
+    if (!confirm("Are you sure you want to delete this department?")) return;
+    try {
+      await deleteDepartment(dept.id);
+      window.location.href = "/departments";
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+    }
+  };
+
+  if (loading || id === null) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Departments", href: "/departments" }, { label: "..." }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-muted-foreground">Loading...</p>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !dept) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Departments", href: "/departments" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-destructive">{error ?? "Department not found"}</p>
+          <Button variant="outline" asChild className="mt-4">
+            <Link href="/departments">Back to Departments</Link>
+          </Button>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -80,10 +145,10 @@ export default async function DepartmentDetailPage({
                     <h1 className="text-2xl font-semibold tracking-tight">
                       {dept.name}
                     </h1>
-                    <Badge variant="secondary">{dept.code}</Badge>
+                    <Badge variant="secondary">{dept.code ?? "—"}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {location?.name}
+                    {dept.location_name ?? "—"}
                   </p>
                 </div>
               </div>
@@ -102,7 +167,7 @@ export default async function DepartmentDetailPage({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
                     <Trash2 className="mr-2 size-4" />
                     Delete Department
                   </DropdownMenuItem>
@@ -121,7 +186,7 @@ export default async function DepartmentDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Users className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">{deptUsers.length}</span>
+                  <span className="text-2xl font-bold">—</span>
                 </div>
               </CardContent>
             </Card>
@@ -134,7 +199,7 @@ export default async function DepartmentDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Package className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">{deptAssets.length}</span>
+                  <span className="text-2xl font-bold">—</span>
                 </div>
               </CardContent>
             </Card>
@@ -148,7 +213,7 @@ export default async function DepartmentDetailPage({
                 <div className="flex items-center gap-2">
                   <User className="size-5 text-primary" />
                   <span className="text-sm font-medium">
-                    {dept.hodName || "Not Assigned"}
+                    {dept.hod_name ?? "Not Assigned"}
                   </span>
                 </div>
               </CardContent>
@@ -167,7 +232,7 @@ export default async function DepartmentDetailPage({
                   <div>
                     <p className="text-sm font-medium">Location</p>
                     <p className="text-sm text-muted-foreground">
-                      {location?.name} - {location?.address}
+                      {dept.location_name ?? "—"}
                     </p>
                   </div>
                 </div>
@@ -176,7 +241,7 @@ export default async function DepartmentDetailPage({
                   <div>
                     <p className="text-sm font-medium">Head of Department</p>
                     <p className="text-sm text-muted-foreground">
-                      {dept.hodName || "Not Assigned"}
+                      {dept.hod_name ?? "Not Assigned"}
                     </p>
                   </div>
                 </div>
@@ -184,16 +249,14 @@ export default async function DepartmentDetailPage({
                   <Phone className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Phone Extension</p>
-                    <p className="text-sm text-muted-foreground">Ext. 1234</p>
+                    <p className="text-sm text-muted-foreground">{dept.phone ?? "—"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Mail className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Email</p>
-                    <p className="text-sm text-muted-foreground">
-                      {dept.code.toLowerCase()}@example.com
-                    </p>
+                    <p className="text-sm text-muted-foreground">{dept.email ?? "—"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -201,7 +264,7 @@ export default async function DepartmentDetailPage({
                   <div>
                     <p className="text-sm font-medium">Created</p>
                     <p className="text-sm text-muted-foreground">
-                      January 15, 2024
+                      {new Date(dept.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -221,53 +284,13 @@ export default async function DepartmentDetailPage({
                 </div>
               </CardHeader>
               <CardContent>
-                {deptUsers.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Role</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {deptUsers.slice(0, 5).map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Avatar className="size-7">
-                                <AvatarFallback className="text-xs bg-secondary">
-                                  {user.name
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <Link
-                                href={`/users/${user.id}`}
-                                className="font-medium hover:underline"
-                              >
-                                {user.name}
-                              </Link>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{user.role}</Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Users className="mb-2 size-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      No staff members yet
-                    </p>
-                    <Button size="sm" className="mt-4" asChild>
-                      <Link href="/users/new">Add First User</Link>
-                    </Button>
-                  </div>
-                )}
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Users className="mb-2 size-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No staff members yet</p>
+                  <Button size="sm" className="mt-4" asChild>
+                    <Link href="/users/new">Add First User</Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

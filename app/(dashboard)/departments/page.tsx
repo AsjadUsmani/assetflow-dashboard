@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   FolderTree,
@@ -41,14 +41,61 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { departments, locations } from "@/lib/mock-data";
+import {
+  getDepartments,
+  deleteDepartment,
+  type Department,
+} from "@/lib/services/departments";
 
 export default function DepartmentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getDepartments()
+      .then((data) => {
+        if (!cancelled) setDepartments(data);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to load departments");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredDepartments = departments.filter((dept) =>
     dept.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleDelete = async (id: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!confirm("Are you sure you want to delete this department?")) return;
+    try {
+      await deleteDepartment(id);
+      setDepartments((prev) => prev.filter((d) => d.id !== id));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+    }
+  };
+
+  if (error) {
+    return (
+      <>
+        <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Departments" }]} />
+        <main className="flex-1 overflow-auto p-6">
+          <p className="text-destructive">{error}</p>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -83,8 +130,9 @@ export default function DepartmentsPage() {
                 <div>
                   <CardTitle className="text-base">All Departments</CardTitle>
                   <CardDescription>
-                    {filteredDepartments.length} department
-                    {filteredDepartments.length !== 1 ? "s" : ""} found
+                    {loading
+                      ? "Loading..."
+                      : `${filteredDepartments.length} department${filteredDepartments.length !== 1 ? "s" : ""} found`}
                   </CardDescription>
                 </div>
                 <div className="relative w-full sm:w-64">
@@ -111,11 +159,20 @@ export default function DepartmentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredDepartments.map((dept) => {
-                    const location = locations.find(
-                      (l) => l.id === dept.locationId
-                    );
-                    return (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredDepartments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        No departments found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredDepartments.map((dept) => (
                       <TableRow key={dept.id}>
                         <TableCell>
                           <Link
@@ -128,7 +185,7 @@ export default function DepartmentsPage() {
                             <div>
                               <p className="font-medium">{dept.name}</p>
                               <p className="text-xs text-muted-foreground">
-                                Code: {dept.code}
+                                Code: {dept.code ?? "—"}
                               </p>
                             </div>
                           </Link>
@@ -136,28 +193,14 @@ export default function DepartmentsPage() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <MapPin className="size-4 text-muted-foreground" />
-                            <span>{location?.name || "Unknown"}</span>
+                            <span>{dept.location_name ?? "—"}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {dept.hodName || "Not Assigned"}
+                          {dept.hod_name ?? "Not Assigned"}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Users className="size-4 text-muted-foreground" />
-                            <span>
-                              {Math.floor(Math.random() * 20) + 3} staff
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Package className="size-4 text-muted-foreground" />
-                            <Badge variant="outline">
-                              {Math.floor(Math.random() * 80) + 10} assets
-                            </Badge>
-                          </div>
-                        </TableCell>
+                        <TableCell>—</TableCell>
+                        <TableCell>—</TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -179,7 +222,10 @@ export default function DepartmentsPage() {
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive">
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={(e) => handleDelete(dept.id, e)}
+                              >
                                 <Trash2 className="mr-2 size-4" />
                                 Delete
                               </DropdownMenuItem>
@@ -187,8 +233,8 @@ export default function DepartmentsPage() {
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

@@ -31,9 +31,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { assets, locations, departments, users } from "@/lib/mock-data";
+import type { Asset } from "@/lib/services/assets";
+import { deleteAsset } from "@/lib/services/assets";
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   available: { label: "Available", className: "bg-success/20 text-success border-success/30" },
   assigned: { label: "Assigned", className: "bg-primary/20 text-primary border-primary/30" },
   in_maintenance: { label: "In Maintenance", className: "bg-warning/20 text-warning border-warning/30" },
@@ -41,29 +42,52 @@ const statusConfig = {
   lost: { label: "Lost", className: "bg-destructive/20 text-destructive border-destructive/30" },
 };
 
-const categoryConfig = {
-  physical: { label: "Physical", className: "bg-chart-1/20 text-chart-1" },
-  digital: { label: "Digital", className: "bg-chart-2/20 text-chart-2" },
-  consumable: { label: "Consumable", className: "bg-chart-3/20 text-chart-3" },
-  rechargeable: { label: "Rechargeable", className: "bg-chart-4/20 text-chart-4" },
-};
-
-export function AssetsTable() {
-  const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
+export function AssetsTable({
+  assets,
+  loading,
+  error,
+  onRefresh,
+}: {
+  assets: Asset[];
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+}) {
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const toggleSelectAll = () => {
-    if (selectedAssets.length === assets.length) {
-      setSelectedAssets([]);
+    if (selectedIds.length === assets.length) {
+      setSelectedIds([]);
     } else {
-      setSelectedAssets(assets.map((a) => a.id));
+      setSelectedIds(assets.map((a) => a.id));
     }
   };
 
-  const toggleSelect = (id: string) => {
-    setSelectedAssets((prev) =>
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this asset?")) return;
+    try {
+      await deleteAsset(id);
+      onRefresh();
+    } catch {
+      // ignore
+    }
+  };
+
+  if (error) {
+    return (
+      <Card className="bg-card border-border">
+        <CardContent className="p-6">
+          <p className="text-sm text-destructive">{error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-card border-border">
@@ -73,13 +97,13 @@ export function AssetsTable() {
             <TableRow className="border-border hover:bg-transparent">
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedAssets.length === assets.length}
+                  checked={assets.length > 0 && selectedIds.length === assets.length}
                   onCheckedChange={toggleSelectAll}
+                  disabled={assets.length === 0}
                 />
               </TableHead>
               <TableHead className="text-muted-foreground">Asset Name</TableHead>
               <TableHead className="text-muted-foreground">Type</TableHead>
-              <TableHead className="text-muted-foreground">Category</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
               <TableHead className="text-muted-foreground">Location</TableHead>
               <TableHead className="text-muted-foreground">Department</TableHead>
@@ -88,129 +112,128 @@ export function AssetsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assets.map((asset) => {
-              const status = statusConfig[asset.status];
-              const category = categoryConfig[asset.category];
-              const location = locations.find((l) => l.id === asset.locationId);
-              const department = departments.find((d) => d.id === asset.departmentId);
-              const assignedUser = asset.assignedToId
-                ? users.find((u) => u.id === asset.assignedToId)
-                : null;
-
-              return (
-                <TableRow key={asset.id} className="border-border">
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedAssets.includes(asset.id)}
-                      onCheckedChange={() => toggleSelect(asset.id)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/assets/${asset.id}`}
-                      className="font-medium text-foreground hover:text-primary transition-colors"
-                    >
-                      {asset.name}
-                    </Link>
-                    {asset.serialNumber && (
-                      <p className="text-xs text-muted-foreground">
-                        {asset.serialNumber}
-                      </p>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {asset.assetType.name}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={category.className}>
-                      {category.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={status.className}>
-                      {status.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {location?.name || "-"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {department?.name || "-"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {assignedUser?.name || "-"}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8">
-                          <MoreHorizontal className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/assets/${asset.id}`}>
-                            <Eye className="mr-2 size-4" />
-                            View Details
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Pencil className="mr-2 size-4" />
-                          Edit Asset
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <ArrowLeftRight className="mr-2 size-4" />
-                          Transfer Asset
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <UserPlus className="mr-2 size-4" />
-                          Assign User
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="mr-2 size-4" />
-                          Delete Asset
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : assets.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  No assets found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              assets.map((asset) => {
+                const status = statusConfig[asset.status] ?? { label: asset.status, className: "" };
+                return (
+                  <TableRow key={asset.id} className="border-border">
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(asset.id)}
+                        onCheckedChange={() => toggleSelect(asset.id)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/assets/${asset.id}`}
+                        className="font-medium text-foreground hover:text-primary transition-colors"
+                      >
+                        {asset.name}
+                      </Link>
+                      {asset.serial_number && (
+                        <p className="text-xs text-muted-foreground">{asset.serial_number}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {asset.asset_type_name}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={status.className}>
+                        {status.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {asset.location_name ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {asset.department_name ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {asset.assigned_to_name ?? "-"}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8">
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/assets/${asset.id}`}>
+                              <Eye className="mr-2 size-4" />
+                              View Details
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/assets/${asset.id}/edit`}>
+                              <Pencil className="mr-2 size-4" />
+                              Edit Asset
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem>
+                            <ArrowLeftRight className="mr-2 size-4" />
+                            Transfer Asset
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <UserPlus className="mr-2 size-4" />
+                            Assign User
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleDelete(asset.id)}
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Delete Asset
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
 
-        <div className="flex items-center justify-between border-t border-border px-4 py-3">
-          <div className="text-sm text-muted-foreground">
-            {selectedAssets.length > 0 ? (
-              <span>{selectedAssets.length} of {assets.length} selected</span>
-            ) : (
-              <span>Showing {assets.length} assets</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled>
-              <ChevronLeft className="mr-1 size-4" />
-              Previous
-            </Button>
-            <div className="flex items-center gap-1">
+        {!loading && assets.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+            <div className="text-sm text-muted-foreground">
+              {selectedIds.length > 0 ? (
+                <span>{selectedIds.length} of {assets.length} selected</span>
+              ) : (
+                <span>Showing {assets.length} assets</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled>
+                <ChevronLeft className="mr-1 size-4" />
+                Previous
+              </Button>
               <Button variant="secondary" size="sm" className="size-8 p-0">
                 1
               </Button>
-              <Button variant="ghost" size="sm" className="size-8 p-0">
-                2
-              </Button>
-              <Button variant="ghost" size="sm" className="size-8 p-0">
-                3
+              <Button variant="outline" size="sm" disabled>
+                Next
+                <ChevronRight className="ml-1 size-4" />
               </Button>
             </div>
-            <Button variant="outline" size="sm">
-              Next
-              <ChevronRight className="ml-1 size-4" />
-            </Button>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
