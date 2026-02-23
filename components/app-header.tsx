@@ -1,17 +1,18 @@
 "use client";
 
-import { Bell, HelpCircle } from "lucide-react";
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
@@ -22,36 +23,44 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { GlobalSearch } from "@/components/dashboard/global-search";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { getAuthUser, logout } from "@/lib/services/auth";
 
 interface AppHeaderProps {
   breadcrumbs?: { label: string; href?: string }[];
 }
 
-const notifications = [
-  {
-    id: 1,
-    title: "License expiring soon",
-    description: "Adobe Creative Cloud expires in 14 days",
-    time: "2 hours ago",
-    type: "warning",
-  },
-  {
-    id: 2,
-    title: "Asset transfer approved",
-    description: "MacBook Pro transfer to Engineering",
-    time: "5 hours ago",
-    type: "success",
-  },
-  {
-    id: 3,
-    title: "New user added",
-    description: "Sarah Chen joined the Engineering team",
-    time: "1 day ago",
-    type: "info",
-  },
-];
-
 export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
+  const router = useRouter();
+  const [authUser, setAuthUser] = React.useState<ReturnType<typeof getAuthUser>>(null);
+  const [loggingOut, setLoggingOut] = React.useState(false);
+
+  React.useEffect(() => {
+    setAuthUser(getAuthUser());
+  }, []);
+
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setLoggingOut(false);
+      router.replace("/login");
+    }
+  }
+
+  const displayName =
+    authUser?.first_name && authUser?.last_name
+      ? `${authUser.first_name} ${authUser.last_name}`
+      : authUser?.username ?? "User";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-4">
       <SidebarTrigger className="-ml-1" />
@@ -81,64 +90,45 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         </Breadcrumb>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-1">
         <div className="hidden md:block">
           <GlobalSearch />
         </div>
 
-        <Button variant="ghost" size="icon" className="hidden md:flex">
-          <HelpCircle className="size-4" />
-          <span className="sr-only">Help</span>
-        </Button>
+        <ThemeToggle />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="size-4" />
-              <Badge className="absolute -top-1 -right-1 size-5 p-0 flex items-center justify-center text-[10px]">
-                3
-              </Badge>
-              <span className="sr-only">Notifications</span>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 px-2 py-1.5 h-auto shrink-0"
+              aria-label="Profile menu"
+            >
+              <Avatar className="size-8">
+                <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <span className="hidden sm:inline text-sm font-medium truncate max-w-[120px]">
+                {displayName}
+              </span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel className="flex items-center justify-between">
-              Notifications
-              <Button variant="ghost" size="sm" className="h-auto py-1 px-2 text-xs">
-                Mark all read
-              </Button>
-            </DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-2">
+              <p className="text-sm font-medium truncate">{displayName}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {authUser?.email ?? "No email"}
+              </p>
+            </div>
             <DropdownMenuSeparator />
-            {notifications.map((notification) => (
-              <DropdownMenuItem
-                key={notification.id}
-                className="flex flex-col items-start gap-1 p-3 cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`size-2 rounded-full ${
-                      notification.type === "warning"
-                        ? "bg-warning"
-                        : notification.type === "success"
-                          ? "bg-success"
-                          : "bg-primary"
-                    }`}
-                  />
-                  <span className="font-medium text-sm">
-                    {notification.title}
-                  </span>
-                </div>
-                <span className="text-xs text-muted-foreground pl-4">
-                  {notification.description}
-                </span>
-                <span className="text-xs text-muted-foreground pl-4">
-                  {notification.time}
-                </span>
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="justify-center text-primary cursor-pointer">
-              View all notifications
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={handleLogout}
+              disabled={loggingOut}
+            >
+              <LogOut className="mr-2 size-4" />
+              {loggingOut ? "Signing out..." : "Log out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

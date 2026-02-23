@@ -6,10 +6,18 @@ import { handleGlobalApiError } from "./globalApiErrorHandler"
  */
 
 // Prefer explicit backend URL, then fall back to local Next.js API routes.
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "/api"
+// Backend mounts all routes at /api/v1; add that path when using an absolute backend URL.
+function getApiBaseUrl(): string {
+  const raw =
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "/api"
+  if (raw.startsWith("http") && !raw.includes("/api/v1")) {
+    return raw.replace(/\/$/, "") + "/api/v1"
+  }
+  return raw
+}
+const API_BASE_URL = getApiBaseUrl()
 
 export interface ApiResponse<T = unknown> { 
   success: boolean
