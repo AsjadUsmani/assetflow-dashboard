@@ -37,6 +37,8 @@ import {
   getAssetTypes,
   getAssetTypeById,
   updateAssetType,
+  duplicateAssetType,
+  deleteAssetType,
   type AssetType,
   type UpdateAssetTypeBody,
 } from "@/lib/services/asset-types";
@@ -471,6 +473,7 @@ export function AssetTypesList() {
   const [error, setError] = React.useState<string | null>(null);
   const [viewing, setViewing] = React.useState<AssetType | null>(null);
   const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [actionId, setActionId] = React.useState<number | null>(null);
 
   const loadList = React.useCallback(() => {
     getAssetTypes()
@@ -481,6 +484,34 @@ export function AssetTypesList() {
   React.useEffect(() => {
     loadList();
   }, [loadList]);
+
+  const handleDuplicate = async (id: number) => {
+    try {
+      setError(null);
+      setActionId(id);
+      await duplicateAssetType(id);
+      loadList();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to duplicate asset type");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      setError(null);
+      setActionId(id);
+      await deleteAssetType(id);
+      if (viewing?.id === id) setViewing(null);
+      if (editingId === id) setEditingId(null);
+      loadList();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete asset type");
+    } finally {
+      setActionId(null);
+    }
+  };
 
   if (error) {
     return <div className="text-sm text-destructive">{error}</div>;
@@ -525,12 +556,12 @@ export function AssetTypesList() {
                   <Pencil className="mr-2 size-4" />
                   Edit Type
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem disabled={actionId === assetType.id} onClick={() => handleDuplicate(assetType.id)}>
                   <Copy className="mr-2 size-4" />
                   Duplicate
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">
+                <DropdownMenuItem disabled={actionId === assetType.id} className="text-destructive" onClick={() => handleDelete(assetType.id)}>
                   <Trash2 className="mr-2 size-4" />
                   Delete
                 </DropdownMenuItem>

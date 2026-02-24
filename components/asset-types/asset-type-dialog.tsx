@@ -44,8 +44,11 @@ import {
   type Property,
   type CreatePropertyBody,
 } from "@/lib/services/properties";
+import {
+  createAssetType,
+  type CreateAssetTypeBody,
+} from "@/lib/services/asset-types";
 
-/** Selected property for this asset type (id from API, optional required flag). */
 interface SelectedProperty {
   id: number;
   name: string;
@@ -61,20 +64,41 @@ function slugCode(name: string): string {
     .replace(/[^a-z0-9_]/g, "");
 }
 
-export function AssetTypeDialog() {
+interface AssetTypeFormData {
+  name: string;
+  description: string;
+  hasExpiry: boolean;
+  isRechargeable: boolean;
+  isOneTimeUse: boolean;
+  isMovable: boolean;
+  requiresAssignment: boolean;
+}
+
+export function AssetTypeDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [existingProperties, setExistingProperties] = useState<Property[]>([]);
   const [propertiesLoading, setPropertiesLoading] = useState(false);
   const [selected, setSelected] = useState<SelectedProperty[]>([]);
   const [propertyPopoverOpen, setPropertyPopoverOpen] = useState(false);
 
-  // Create new property inline state
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCode, setNewCode] = useState("");
   const [newDataType, setNewDataType] = useState("text");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState<AssetTypeFormData>({
+    name: "",
+    description: "",
+    hasExpiry: false,
+    isRechargeable: false,
+    isOneTimeUse: false,
+    isMovable: true,
+    requiresAssignment: true,
+  });
 
   useEffect(() => {
     if (open) {
@@ -84,9 +108,19 @@ export function AssetTypeDialog() {
         .catch(() => setExistingProperties([]))
         .finally(() => setPropertiesLoading(false));
     } else {
+      setFormData({
+        name: "",
+        description: "",
+        hasExpiry: false,
+        isRechargeable: false,
+        isOneTimeUse: false,
+        isMovable: true,
+        requiresAssignment: true,
+      });
       setSelected([]);
       setShowCreateForm(false);
       setPropertyPopoverOpen(false);
+      setError(null);
     }
   }, [open]);
 
@@ -124,7 +158,9 @@ export function AssetTypeDialog() {
       const created = await createProperty(body);
       addNewlyCreated(created);
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Failed to create property");
+      setCreateError(
+        e instanceof Error ? e.message : "Failed to create property",
+      );
     } finally {
       setCreating(false);
     }
@@ -136,12 +172,50 @@ export function AssetTypeDialog() {
 
   const toggleRequired = (id: number) => {
     setSelected((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, required: !p.required } : p))
+      prev.map((p) => (p.id === id ? { ...p, required: !p.required } : p)),
     );
   };
 
+  const handleSubmit = async () => {
+    if (!formData.name.trim() || saving) {
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const body: CreateAssetTypeBody = {
+        name: formData.name,
+        description: formData.description || null,
+        has_expiry: formData.hasExpiry,
+        is_rechargeable: formData.isRechargeable,
+        is_one_time_use: formData.isOneTimeUse,
+        is_movable: formData.isMovable,
+        requires_assignment: formData.requiresAssignment,
+        properties: selected.map((p, i) => ({
+          property_id: p.id,
+          is_required: p.required,
+          sort_order: i,
+        })),
+      };
+
+      await createAssetType(body);
+
+      // Close dialog and trigger refresh
+      onSuccess?.();
+      setOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create asset type");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const alreadySelectedIds = new Set(selected.map((s) => s.id));
-  const availableToAdd = existingProperties.filter((p) => !alreadySelectedIds.has(p.id));
+  const availableToAdd = existingProperties.filter(
+    (p) => !alreadySelectedIds.has(p.id),
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -159,6 +233,12 @@ export function AssetTypeDialog() {
           </DialogDescription>
         </DialogHeader>
 
+        {error && (
+          <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
         <Tabs defaultValue="general" className="mt-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="general">General</TabsTrigger>
@@ -173,6 +253,10 @@ export function AssetTypeDialog() {
                 id="name"
                 placeholder="e.g., Laptop, Software License, Office Furniture"
                 className="bg-secondary border-0"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
+                }
               />
             </div>
             <div className="space-y-2">
@@ -181,21 +265,14 @@ export function AssetTypeDialog() {
                 id="description"
                 placeholder="Describe what this asset type is used for..."
                 className="bg-secondary border-0 min-h-[100px]"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="category">Default Category</Label>
-              <Select>
-                <SelectTrigger className="bg-secondary border-0">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="physical">Physical</SelectItem>
-                  <SelectItem value="digital">Digital</SelectItem>
-                  <SelectItem value="consumable">Consumable</SelectItem>
-                  <SelectItem value="rechargeable">Rechargeable</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </TabsContent>
 
@@ -212,7 +289,12 @@ export function AssetTypeDialog() {
                     Track expiration dates for licenses, warranties, etc.
                   </p>
                 </div>
-                <Switch />
+                <Switch
+                  checked={formData.hasExpiry}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, hasExpiry: checked }))
+                  }
+                />
               </div>
 
               <div className="flex items-center justify-between rounded-lg bg-secondary p-4">
@@ -222,7 +304,15 @@ export function AssetTypeDialog() {
                     Assets that need periodic recharging or refilling
                   </p>
                 </div>
-                <Switch />
+                <Switch
+                  checked={formData.isRechargeable}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      isRechargeable: checked,
+                    }))
+                  }
+                />
               </div>
 
               <div className="flex items-center justify-between rounded-lg bg-secondary p-4">
@@ -232,7 +322,12 @@ export function AssetTypeDialog() {
                     Consumable items that are used once and discarded
                   </p>
                 </div>
-                <Switch />
+                <Switch
+                  checked={formData.isOneTimeUse}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, isOneTimeUse: checked }))
+                  }
+                />
               </div>
 
               <div className="flex items-center justify-between rounded-lg bg-secondary p-4">
@@ -242,7 +337,12 @@ export function AssetTypeDialog() {
                     Can be transferred between locations/departments
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch
+                  checked={formData.isMovable}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, isMovable: checked }))
+                  }
+                />
               </div>
 
               <div className="flex items-center justify-between rounded-lg bg-secondary p-4">
@@ -254,18 +354,30 @@ export function AssetTypeDialog() {
                     Must be assigned to a user for accountability
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch
+                  checked={formData.requiresAssignment}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      requiresAssignment: checked,
+                    }))
+                  }
+                />
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="properties" className="space-y-4 mt-4">
             <p className="text-sm text-muted-foreground">
-              Search and add existing properties, or create new ones. You can add multiple properties to this asset type.
+              Search and add existing properties, or create new ones. You can
+              add multiple properties to this asset type.
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Popover open={propertyPopoverOpen} onOpenChange={setPropertyPopoverOpen}>
+              <Popover
+                open={propertyPopoverOpen}
+                onOpenChange={setPropertyPopoverOpen}
+              >
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     <Search className="size-4" />
@@ -295,7 +407,10 @@ export function AssetTypeDialog() {
                               onSelect={() => addExisting(p)}
                             >
                               <span className="font-medium">{p.name}</span>
-                              <Badge variant="secondary" className="ml-2 text-xs">
+                              <Badge
+                                variant="secondary"
+                                className="ml-2 text-xs"
+                              >
                                 {p.data_type}
                               </Badge>
                             </CommandItem>
@@ -315,13 +430,16 @@ export function AssetTypeDialog() {
                   </Command>
                   {showCreateForm && (
                     <div className="border-t border-border p-3 space-y-3 bg-muted/30">
-                      <p className="text-xs font-medium text-muted-foreground">New property</p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        New property
+                      </p>
                       <Input
                         placeholder="Property name"
                         value={newName}
                         onChange={(e) => {
                           setNewName(e.target.value);
-                          if (!newCode || newCode === slugCode(newName)) setNewCode(slugCode(e.target.value));
+                          if (!newCode || newCode === slugCode(newName))
+                            setNewCode(slugCode(e.target.value));
                         }}
                         className="bg-background"
                       />
@@ -331,7 +449,10 @@ export function AssetTypeDialog() {
                         onChange={(e) => setNewCode(e.target.value)}
                         className="bg-background font-mono text-sm"
                       />
-                      <Select value={newDataType} onValueChange={setNewDataType}>
+                      <Select
+                        value={newDataType}
+                        onValueChange={setNewDataType}
+                      >
                         <SelectTrigger className="bg-background">
                           <SelectValue />
                         </SelectTrigger>
@@ -345,7 +466,9 @@ export function AssetTypeDialog() {
                         </SelectContent>
                       </Select>
                       {createError && (
-                        <p className="text-xs text-destructive">{createError}</p>
+                        <p className="text-xs text-destructive">
+                          {createError}
+                        </p>
                       )}
                       <div className="flex gap-2">
                         <Button
@@ -386,8 +509,13 @@ export function AssetTypeDialog() {
                   >
                     <GripVertical className="size-4 text-muted-foreground cursor-grab shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <span className="font-medium text-foreground">{prop.name}</span>
-                      <Badge variant="outline" className="ml-2 text-xs shrink-0">
+                      <span className="font-medium text-foreground">
+                        {prop.name}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="ml-2 text-xs shrink-0"
+                      >
                         {prop.data_type}
                       </Badge>
                     </div>
@@ -418,7 +546,8 @@ export function AssetTypeDialog() {
             ) : (
               <div className="rounded-lg border border-dashed border-border p-8 text-center">
                 <p className="text-sm text-muted-foreground">
-                  No properties added yet. Use &quot;Search or add property&quot; to add existing ones or create new.
+                  No properties added yet. Use &quot;Search or add
+                  property&quot; to add existing ones or create new.
                 </p>
               </div>
             )}
@@ -426,14 +555,26 @@ export function AssetTypeDialog() {
         </Tabs>
 
         <DialogFooter className="mt-6">
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={saving}
+          >
             Cancel
           </Button>
           <Button
             className="bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => setOpen(false)}
+            onClick={handleSubmit}
+            disabled={saving || !formData.name.trim()}
           >
-            Create Asset Type
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create Asset Type"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

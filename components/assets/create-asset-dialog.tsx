@@ -55,13 +55,19 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
 
   useEffect(() => {
     if (open) {
-      Promise.all([getAssetTypes(), getLocations(), getDepartments()]).then(
-        ([types, locs, depts]) => {
+      setLoading(true);
+      Promise.all([getAssetTypes(), getLocations(), getDepartments()])
+        .then(([types, locs, depts]) => {
           setAssetTypes(types);
           setLocations(locs);
           setDepartments(depts);
-        }
-      );
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : "Failed to load data");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } else {
       setSelectedTypeId("");
       setName("");
@@ -74,6 +80,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setExpiryDate("");
       setPropertyValues({});
       setError(null);
+      setLoading(false);
     }
   }, [open]);
 

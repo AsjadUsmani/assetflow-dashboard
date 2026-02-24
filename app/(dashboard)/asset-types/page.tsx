@@ -1,8 +1,17 @@
+"use client";
+
+import { useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { AssetTypesList } from "@/components/asset-types/asset-types-list";
 import { AssetTypeDialog } from "@/components/asset-types/asset-type-dialog";
 
 export default function AssetTypesPage() {
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleAssetTypeCreated = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
+
   return (
     <>
       <AppHeader
@@ -21,10 +30,10 @@ export default function AssetTypesPage() {
               Configure asset categories and their behavior flags
             </p>
           </div>
-          <AssetTypeDialog />
+          <AssetTypeDialog onSuccess={handleAssetTypeCreated} />
         </div>
 
-        <AssetTypesList />
+        <AssetTypesList key={refreshKey} />
       </div>
     </>
   );
