@@ -93,3 +93,7 @@ export async function updateAsset(id: number, body: UpdateAssetBody): Promise<As
 export async function deleteAsset(id: number): Promise<void> {
   await apiService.delete(`${BASE}/${id}`, true)
 }
+
+export async function exportAssetsCsv(): Promise<Blob> {
+  return apiService.getFile(`${BASE}/export-csv`)
+}

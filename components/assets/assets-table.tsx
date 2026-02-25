@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   MoreHorizontal,
   Eye,
@@ -54,6 +55,7 @@ export function AssetsTable({
   onRefresh: () => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const router = useRouter();
 
   const toggleSelectAll = () => {
     if (selectedIds.length === assets.length) {
@@ -184,11 +186,11 @@ export function AssetsTable({
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/assets/${asset.id}/edit?tab=assignment&action=transfer`)}>
                             <ArrowLeftRight className="mr-2 size-4" />
                             Transfer Asset
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/assets/${asset.id}/edit?tab=assignment&action=assign`)}>
                             <UserPlus className="mr-2 size-4" />
                             Assign User
                           </DropdownMenuItem>

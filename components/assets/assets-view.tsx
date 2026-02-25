@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useSearchParams } from "next/navigation";
-import { getAssets } from "@/lib/services/assets";
+import { getAssets, exportAssetsCsv } from "@/lib/services/assets";
 import { getAssetTypes } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileDown, Upload, ChevronDown } from "lucide-react";
+import { FileDown, Upload, ChevronDown, Download } from "lucide-react";
 import { AssetsFilters } from "./assets-filters";
 import { AssetsTable } from "./assets-table";
 import { CreateAssetDialog } from "./create-asset-dialog";
@@ -70,6 +70,25 @@ export function AssetsView() {
       toast({
         variant: "destructive",
         title: "Download failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    }
+  }, [toast]);
+
+  const handleExportCsv = React.useCallback(async () => {
+    try {
+      const blob = await exportAssetsCsv();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "assets-export.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Export started", description: "assets-export.csv" });
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Export failed",
         description: e instanceof Error ? e.message : "Unknown error",
       });
     }
@@ -146,6 +165,10 @@ export function AssetsView() {
               <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
                 <Upload className="mr-2 size-4" />
                 Import from CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCsv}>
+                <Download className="mr-2 size-4" />
+                Export to CSV
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -27,16 +27,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { getAssetTypes } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
+import { getWorkspaceUsers } from "@/lib/services/workspace-users";
 import { createAsset, type CreateAssetBody } from "@/lib/services/assets";
 import type { AssetType } from "@/lib/services/asset-types";
 import type { Location } from "@/lib/services/locations";
 import type { Department } from "@/lib/services/departments";
+import type { WorkspaceUser } from "@/lib/services/workspace-users";
 
 export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [open, setOpen] = useState(false);
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +49,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [status, setStatus] = useState("available");
   const [locationId, setLocationId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
+  const [assignedUserId, setAssignedUserId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -56,11 +60,12 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   useEffect(() => {
     if (open) {
       setLoading(true);
-      Promise.all([getAssetTypes(), getLocations(), getDepartments()])
-        .then(([types, locs, depts]) => {
+      Promise.all([getAssetTypes(), getLocations(), getDepartments(), getWorkspaceUsers()])
+        .then(([types, locs, depts, usrs]) => {
           setAssetTypes(types);
           setLocations(locs);
           setDepartments(depts);
+          setUsers(usrs);
         })
         .catch((err) => {
           setError(err instanceof Error ? err.message : "Failed to load data");
@@ -75,6 +80,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setStatus("available");
       setLocationId("");
       setDepartmentId("");
+      setAssignedUserId("");
       setPurchaseDate("");
       setWarrantyEndDate("");
       setExpiryDate("");
@@ -108,6 +114,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         status,
         location_id: locationId ? Number(locationId) : undefined,
         department_id: departmentId ? Number(departmentId) : undefined,
+        assigned_to_user_id: assignedUserId ? Number(assignedUserId) : undefined,
         purchase_date: purchaseDate || undefined,
         warranty_end_date: warrantyEndDate || undefined,
         expiry_date: expiryDate || undefined,
@@ -324,6 +331,21 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                 <SelectContent>
                   {departments.map((dept) => (
                     <SelectItem key={dept.id} value={String(dept.id)}>{dept.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Assign to User</Label>
+              <Select value={assignedUserId} onValueChange={setAssignedUserId}>
+                <SelectTrigger className="bg-secondary border-0">
+                  <SelectValue placeholder="Select user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.filter((u) => u.is_active).map((user) => (
+                    <SelectItem key={user.id} value={String(user.id)}>
+                      {[user.first_name, user.last_name].filter(Boolean).join(" ") || user.username}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
