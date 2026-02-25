@@ -52,10 +52,19 @@ import {
 import {
   getProperties,
   getPropertyById,
+  createProperty,
   updateProperty,
   deleteProperty,
   type Property,
 } from "@/lib/services/properties";
+
+function slugCode(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
+}
 
 const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   text: Type,
@@ -187,6 +196,7 @@ export function PropertyBuilderList() {
   const [items, setItems] = React.useState<Property[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [editId, setEditId] = React.useState<number | null>(null);
+  const [actionId, setActionId] = React.useState<number | null>(null);
 
   const loadList = React.useCallback(() => {
     getProperties()
@@ -197,6 +207,28 @@ export function PropertyBuilderList() {
   React.useEffect(() => {
     loadList();
   }, [loadList]);
+
+  const handleDuplicate = async (property: Property) => {
+    try {
+      setError(null);
+      setActionId(property.id);
+      const detail = await getPropertyById(property.id);
+      if (!detail) throw new Error("Property not found");
+      const duplicateName = `${detail.name} Copy`;
+      await createProperty({
+        name: duplicateName,
+        code: `${slugCode(duplicateName)}_${Date.now()}`,
+        description: detail.description ?? undefined,
+        data_type: detail.data_type,
+        config: detail.config ?? undefined,
+      });
+      loadList();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to duplicate property");
+    } finally {
+      setActionId(null);
+    }
+  };
 
   if (error) {
     return <div className="text-sm text-destructive">{error}</div>;
@@ -290,7 +322,7 @@ export function PropertyBuilderList() {
                           <Pencil className="mr-2 size-4" />
                           Edit Property
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem disabled={actionId === property.id} onClick={() => handleDuplicate(property)}>
                           <Copy className="mr-2 size-4" />
                           Duplicate
                         </DropdownMenuItem>

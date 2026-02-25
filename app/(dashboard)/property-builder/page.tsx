@@ -1,8 +1,17 @@
+"use client";
+
+import { useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { PropertyBuilderList } from "@/components/property-builder/property-builder-list";
 import { PropertyDialog } from "@/components/property-builder/property-dialog";
 
 export default function PropertyBuilderPage() {
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handlePropertyChanged = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
+
   return (
     <>
       <AppHeader
@@ -21,10 +30,10 @@ export default function PropertyBuilderPage() {
               Create reusable properties for asset types
             </p>
           </div>
-          <PropertyDialog />
+          <PropertyDialog onSuccess={handlePropertyChanged} />
         </div>
 
-        <PropertyBuilderList />
+        <PropertyBuilderList key={refreshKey} />
       </div>
     </>
   );

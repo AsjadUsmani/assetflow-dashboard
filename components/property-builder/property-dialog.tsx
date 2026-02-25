@@ -23,12 +23,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { createProperty } from "@/lib/services/properties";
 
-export function PropertyDialog() {
+function slugCode(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
+}
+
+export function PropertyDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [open, setOpen] = useState(false);
   const [propertyType, setPropertyType] = useState("text");
   const [options, setOptions] = useState<string[]>([]);
   const [newOption, setNewOption] = useState("");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const addOption = () => {
     if (newOption.trim() && !options.includes(newOption.trim())) {
@@ -41,8 +54,47 @@ export function PropertyDialog() {
     setOptions(options.filter((o) => o !== option));
   };
 
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setPropertyType("text");
+    setOptions([]);
+    setNewOption("");
+    setError(null);
+    setSaving(false);
+  };
+
+  const handleSubmit = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName || saving) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      await createProperty({
+        name: trimmedName,
+        code: `${slugCode(trimmedName)}_${Date.now()}`,
+        description: description.trim() || undefined,
+        data_type: propertyType,
+        config: propertyType === "dropdown" ? { options } : undefined,
+      });
+      onSuccess?.();
+      setOpen(false);
+      resetForm();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create property");
+      setSaving(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (!value) resetForm();
+      }}
+    >
       <DialogTrigger asChild>
         <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
           <Plus className="mr-2 size-4" />
@@ -58,12 +110,26 @@ export function PropertyDialog() {
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="space-y-2">
             <Label htmlFor="propName">Property Name</Label>
             <Input
               id="propName"
               placeholder="e.g., Serial Number, Brand, Color"
               className="bg-secondary border-0"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="propDesc">Description</Label>
+            <Input
+              id="propDesc"
+              placeholder="Optional description"
+              className="bg-secondary border-0"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
@@ -181,14 +247,15 @@ export function PropertyDialog() {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
             Cancel
           </Button>
           <Button
             className="bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => setOpen(false)}
+            onClick={handleSubmit}
+            disabled={saving || !name.trim()}
           >
-            Create Property
+            {saving ? "Creating..." : "Create Property"}
           </Button>
         </DialogFooter>
       </DialogContent>

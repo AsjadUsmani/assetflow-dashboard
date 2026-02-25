@@ -85,7 +85,6 @@ function EditAssetTypeDialog({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [name, setName] = React.useState("");
-  const [code, setCode] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [hasExpiry, setHasExpiry] = React.useState(false);
   const [isRechargeable, setIsRechargeable] = React.useState(false);
@@ -110,7 +109,6 @@ function EditAssetTypeDialog({
         setExistingProperties(props);
         if (at) {
           setName(at.name);
-          setCode(at.code);
           setDescription(at.description ?? "");
           setHasExpiry(at.has_expiry ?? false);
           setIsRechargeable(at.is_rechargeable ?? false);
@@ -177,7 +175,6 @@ function EditAssetTypeDialog({
     try {
       const body: UpdateAssetTypeBody = {
         name: name.trim() || assetType.name,
-        code: code.trim() || assetType.code,
         description: description.trim() || null,
         has_expiry: hasExpiry,
         is_rechargeable: isRechargeable,
@@ -237,10 +234,6 @@ function EditAssetTypeDialog({
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Name</Label>
                 <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-code">Code</Label>
-                <Input id="edit-code" value={code} onChange={(e) => setCode(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-desc">Description</Label>
