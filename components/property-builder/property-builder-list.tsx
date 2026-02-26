@@ -220,7 +220,10 @@ export function PropertyBuilderList() {
         code: `${slugCode(duplicateName)}_${Date.now()}`,
         description: detail.description ?? undefined,
         data_type: detail.data_type,
-        config: detail.config ?? undefined,
+        config: {
+          ...(detail.config ?? {}),
+          required: detail.required,
+        },
       });
       loadList();
     } catch (e) {

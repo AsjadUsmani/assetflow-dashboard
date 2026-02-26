@@ -38,6 +38,7 @@ export function PropertyDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [propertyType, setPropertyType] = useState("text");
   const [options, setOptions] = useState<string[]>([]);
   const [newOption, setNewOption] = useState("");
+  const [required, setRequired] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
@@ -60,6 +61,7 @@ export function PropertyDialog({ onSuccess }: { onSuccess?: () => void }) {
     setPropertyType("text");
     setOptions([]);
     setNewOption("");
+    setRequired(false);
     setError(null);
     setSaving(false);
   };
@@ -76,7 +78,10 @@ export function PropertyDialog({ onSuccess }: { onSuccess?: () => void }) {
         code: `${slugCode(trimmedName)}_${Date.now()}`,
         description: description.trim() || undefined,
         data_type: propertyType,
-        config: propertyType === "dropdown" ? { options } : undefined,
+        config: {
+          ...(propertyType === "dropdown" ? { options } : {}),
+          required,
+        },
       });
       onSuccess?.();
       setOpen(false);
@@ -242,7 +247,7 @@ export function PropertyDialog({ onSuccess }: { onSuccess?: () => void }) {
                 This field must be filled when creating an asset
               </p>
             </div>
-            <Switch />
+            <Switch checked={required} onCheckedChange={setRequired} />
           </div>
         </div>
 

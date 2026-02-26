@@ -54,6 +54,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [propertyValues, setPropertyValues] = useState<Record<string, string | number | boolean>>({});
+  const [propertyErrors, setPropertyErrors] = useState<Record<string, boolean>>({});
 
   const assetType = assetTypes.find((t) => String(t.id) === selectedTypeId);
 
@@ -85,6 +86,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setWarrantyEndDate("");
       setExpiryDate("");
       setPropertyValues({});
+      setPropertyErrors({});
       setError(null);
       setLoading(false);
     }
@@ -92,14 +94,38 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
 
   useEffect(() => {
     setPropertyValues({});
+    setPropertyErrors({});
   }, [selectedTypeId]);
 
   const setPropertyValue = (propName: string, value: string | number | boolean) => {
     setPropertyValues((prev) => ({ ...prev, [propName]: value }));
+    if (propertyErrors[propName]) {
+      setPropertyErrors((prev) => {
+        const next = { ...prev };
+        delete next[propName];
+        return next;
+      });
+    }
   };
 
   const handleSubmit = async () => {
     if (!selectedTypeId || !name.trim()) return;
+
+    // Validate required properties
+    const requiredProps = assetType?.properties?.filter((p) => p.is_required) ?? [];
+    const errors: Record<string, boolean> = {};
+    for (const prop of requiredProps) {
+      const val = propertyValues[prop.name];
+      if (val === undefined || val === "" || val === null) {
+        errors[prop.name] = true;
+      }
+    }
+    setPropertyErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setError(`Please fill in all required properties: ${requiredProps.filter((p) => errors[p.name]).map((p) => p.name).join(", ")}`);
+      return;
+    }
+
     setError(null);
     setLoading(true);
     try {
@@ -241,7 +267,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                   const options = Array.isArray(prop.config?.options) ? (prop.config.options as string[]) : [];
                   return (
                     <div key={prop.id} className="space-y-2">
-                      <Label htmlFor={`prop-${prop.id}`}>
+                      <Label htmlFor={`prop-${prop.id}`} className={propertyErrors[prop.name] ? "text-destructive" : undefined}>
                         {prop.name}
                         {prop.is_required && <span className="text-destructive"> *</span>}
                       </Label>
@@ -296,6 +322,9 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                           value={typeof value === "string" || typeof value === "number" ? String(value) : ""}
                           onChange={(e) => setPropertyValue(prop.name, e.target.value)}
                         />
+                      )}
+                      {propertyErrors[prop.name] && (
+                        <p className="text-xs text-destructive">This field is required</p>
                       )}
                     </div>
                   );

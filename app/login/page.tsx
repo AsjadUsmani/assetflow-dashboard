@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { login, isAuthenticated } from "@/lib/services/auth"
+import { login } from "@/lib/services/auth"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -28,12 +28,7 @@ export default function LoginPage() {
 
   const [error, setError] = React.useState<string | null>(null)
 
-  // If already logged in, go straight to dashboard
-  React.useEffect(() => {
-    if (isAuthenticated()) {
-      router.replace("/dashboard")
-    }
-  }, [router])
+  // Auth redirect is handled by middleware.ts – no client-side check needed
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()

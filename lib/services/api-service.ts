@@ -124,7 +124,10 @@ class ApiService {
   private handleLogout(): void {
     if (typeof window === "undefined") return
 
-    // Remove token
+    // Clear the httpOnly auth cookie via the logout API route
+    fetch("/api/auth/logout", { method: "POST" }).catch(() => {})
+
+    // Remove token from localStorage
     this.removeToken()
 
     // Clear user-related localStorage items
