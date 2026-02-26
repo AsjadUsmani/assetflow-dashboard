@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -16,9 +16,8 @@ import {
   FileText,
   Users,
   Settings,
-  ChevronDown,
-  LogOut,
   Bell,
+  ChevronDown,
   GitPullRequest,
   FileCheck,
   GitBranch,
@@ -30,7 +29,6 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -45,20 +43,11 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { getAuthUser, logout } from "@/lib/services/auth"
 import { getWorkspaceMenus, type WorkspaceMenu, type WorkspaceMenuGroup } from "@/lib/services/menu"
 
 interface NavItem {
@@ -165,16 +154,12 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
-  const router = useRouter();
 
-  const [loggingOut, setLoggingOut] = React.useState(false);
   const [menuGroups, setMenuGroups] = React.useState<WorkspaceMenuGroup[]>([]);
   const [menusError, setMenusError] = React.useState<string | null>(null);
-  const [authUser, setAuthUser] = React.useState<any | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
-    setAuthUser(getAuthUser());
     getWorkspaceMenus()
       .then(data => {
         if (!cancelled) {
@@ -191,17 +176,6 @@ export function AppSidebar() {
       cancelled = true;
     };
   }, []);
-
-  async function handleLogout() {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    try {
-      await logout();
-    } finally {
-      setLoggingOut(false);
-      router.replace("/login");
-    }
-  }
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -288,69 +262,6 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="data-[state=open]:bg-sidebar-accent"
-                >
-                  <Avatar className="size-8">
-                    <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                      {(authUser?.first_name ?? authUser?.username ?? "U")
-                        .toString()
-                        .split(" ")
-                        .map((n: string) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!isCollapsed && (
-                    <div className="flex flex-1 flex-col text-left text-sm">
-                      <span className="font-medium truncate">
-                        {authUser?.first_name && authUser?.last_name
-                          ? `${authUser.first_name} ${authUser.last_name}`
-                          : authUser?.username ?? "User"}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate">
-                        {authUser?.role?.name ?? "Role"}
-                      </span>
-                    </div>
-                  )}
-                  {!isCollapsed && <ChevronDown className="size-4" />}
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                align="start"
-                className="w-56"
-              >
-                <DropdownMenuItem>
-                  <Bell className="mr-2 size-4" />
-                  Notifications
-                  <Badge variant="secondary" className="ml-auto">
-                    5
-                  </Badge>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 size-4" />
-                  Account Settings
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                >
-                  <LogOut className="mr-2 size-4" />
-                  {loggingOut ? "Signing out..." : "Sign Out"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }
