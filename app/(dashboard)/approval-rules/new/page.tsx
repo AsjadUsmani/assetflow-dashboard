@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { apiService } from "@/lib/services/api-service";
 
 const requestTypes = [
   { value: "create", label: "Create Asset" },
@@ -149,9 +150,31 @@ export default function NewApprovalRulePage() {
     );
   };
 
-  const handleSubmit = () => {
-    // In real app, this would call an API
-    router.push("/approval-rules");
+  const handleSubmit = async () => {
+    if (!formData.name.trim()) {
+      return;
+    }
+
+    const payload = {
+      name: formData.name.trim(),
+      description: formData.description.trim() || null,
+      is_active: formData.isActive,
+      request_types: formData.requestTypes,
+      asset_categories: formData.assetCategories,
+      min_value: formData.minValue ? Number(formData.minValue) : null,
+      max_value: formData.maxValue ? Number(formData.maxValue) : null,
+      escalation_days: formData.escalationDays ? Number(formData.escalationDays) : null,
+      allow_parallel_approval: formData.allowParallelApproval,
+      require_all_approvers: formData.requireAllApprovers,
+      levels: approvalLevels,
+    };
+
+    try {
+      await apiService.post("/workspace/approval-rules", payload);
+      router.push("/approval-rules");
+    } catch {
+      // TODO: surface toast error once notifications are wired
+    }
   };
 
   const levelColors: Record<string, string> = {

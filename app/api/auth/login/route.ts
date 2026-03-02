@@ -21,6 +21,20 @@ type BackendLoginResponse = {
   mode: string
 }
 
+function getBackendBaseUrl(): string {
+  const raw =
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "http://localhost:3001"
+
+  // If it's an absolute URL and doesn't already include /api/v1, append it.
+  if (raw.startsWith("http") && !raw.includes("/api/v1")) {
+    return raw.replace(/\/$/, "") + "/api/v1"
+  }
+
+  return raw.replace(/\/$/, "")
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as {
@@ -40,7 +54,7 @@ export async function POST(req: Request) {
       )
     }
 
-    const backendBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001"
+    const backendBase = getBackendBaseUrl()
     const backendRes = await fetch(`${backendBase}/auth/login`, {
       method: "POST",
       headers: { "content-type": "application/json" },

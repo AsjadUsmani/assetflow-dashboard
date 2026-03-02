@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart,
@@ -9,17 +10,19 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
-import { locations } from "@/lib/mock-data";
+import { getAssets, type Asset } from "@/lib/services/assets";
+import { getLocations, type Location } from "@/lib/services/locations";
 
-const data = [
-  { name: "Headquarters", assets: 1245, available: 420, assigned: 825 },
-  { name: "West Coast", assets: 823, available: 312, assigned: 511 },
-  { name: "Chicago", assets: 479, available: 160, assigned: 319 },
-];
-
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number }>; label?: string }) => {
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number }>;
+  label?: string;
+}) => {
   if (active && payload && payload.length) {
     return (
       <div className="rounded-lg border border-border bg-card p-3 shadow-lg">
@@ -36,7 +39,65 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
   return null;
 };
 
+type ChartRow = {
+  name: string;
+  assets: number;
+  available: number;
+  assigned: number;
+};
+
 export function AssetsByLocation() {
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const [assetsData, locationsData] = await Promise.all([
+          getAssets(),
+          getLocations(),
+        ]);
+        if (!isMounted) return;
+        setAssets(assetsData);
+        setLocations(locationsData);
+      } catch {
+        // ignore; dashboard can show empty chart on error
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const data: ChartRow[] = useMemo(() => {
+    if (!locations.length) return [];
+    const byLocation: Record<
+      number,
+      { name: string; assets: number; available: number; assigned: number }
+    > = {};
+
+    locations.forEach((loc) => {
+      byLocation[loc.id] = {
+        name: loc.name,
+        assets: 0,
+        available: 0,
+        assigned: 0,
+      };
+    });
+
+    assets.forEach((asset) => {
+      if (!asset.location_id) return;
+      const bucket = byLocation[asset.location_id];
+      if (!bucket) return;
+      bucket.assets += 1;
+      if (asset.status === "available") bucket.available += 1;
+      else bucket.assigned += 1;
+    });
+
+    return Object.values(byLocation);
+  }, [assets, locations]);
+
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2">

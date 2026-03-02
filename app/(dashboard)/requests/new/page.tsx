@@ -33,7 +33,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { assets, locations, departments, users, assetTypes, approvalRoutingRules } from "@/lib/mock-data";
+import { createRequest } from "@/lib/services/requests";
+import { getAssets, type Asset } from "@/lib/services/assets";
+import { getLocations, type Location } from "@/lib/services/locations";
+import { getDepartments, type Department } from "@/lib/services/departments";
+import { getWorkspaceUsers, type WorkspaceUser } from "@/lib/services/workspace-users";
+import { getAssetTypes, type AssetType } from "@/lib/services/asset-types";
 
 const requestTypes = [
   {
@@ -76,6 +81,12 @@ function NewRequestForm() {
   const [step, setStep] = useState(1);
   const [requestType, setRequestType] = useState(typeFromUrl || "");
   const [selectedAsset, setSelectedAsset] = useState("");
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [users, setUsers] = useState<WorkspaceUser[]>([]);
+  const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(true);
   const [formData, setFormData] = useState({
     // Asset details (for create)
     assetName: "",
@@ -104,6 +115,35 @@ function NewRequestForm() {
     }
   }, [typeFromUrl]);
 
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const [assetList, locationList, departmentList, userList, assetTypeList] =
+          await Promise.all([
+          getAssets(),
+          getLocations(),
+          getDepartments(),
+          getWorkspaceUsers(),
+          getAssetTypes(),
+        ]);
+        if (!isMounted) return;
+        setAssets(assetList);
+        setLocations(locationList);
+        setDepartments(departmentList);
+        setUsers(userList);
+        setAssetTypes(assetTypeList);
+      } catch {
+        // swallow; global handler can surface toast separately
+      } finally {
+        if (isMounted) setLoadingLookups(false);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleNext = () => {
     setStep(step + 1);
   };
@@ -116,24 +156,48 @@ function NewRequestForm() {
     }
   };
 
-  const handleSubmit = () => {
-    // In real app, this would call an API
-    router.push("/requests");
+  const handleSubmit = async () => {
+    // Create a backend request with full linkage (asset, locations, departments, user).
+    try {
+      const asset = selectedAsset
+        ? assets.find((a) => String(a.id) === selectedAsset)
+        : null;
+
+      const body: Parameters<typeof createRequest>[0] = {
+        type: requestType,
+        priority: formData.priority,
+        reason: formData.reason,
+        justification: formData.justification || undefined,
+      };
+
+      if (asset) {
+        body.asset_id = asset.id;
+        if (asset.location_id != null) body.from_location_id = asset.location_id;
+        if (asset.department_id != null) body.from_department_id = asset.department_id;
+      }
+
+      if (requestType === "transfer" || requestType === "assign") {
+        if (formData.toLocationId) {
+          body.to_location_id = Number(formData.toLocationId);
+        }
+        if (formData.toDepartmentId) {
+          body.to_department_id = Number(formData.toDepartmentId);
+        }
+      }
+
+      if (requestType === "assign" && formData.toUserId) {
+        body.to_user_id = Number(formData.toUserId);
+      }
+
+      await createRequest(body);
+    } finally {
+      router.push("/requests");
+    }
   };
 
   const selectedAssetData = selectedAsset
-    ? assets.find((a) => a.id === selectedAsset)
+    ? assets.find((a) => String(a.id) === selectedAsset)
     : null;
-
-  // Get approval chain preview
-  const getApprovalChainPreview = () => {
-    const rule = approvalRoutingRules.find(
-      (r) => r.conditions.requestTypes.includes(requestType as any) && r.isActive
-    );
-    return rule?.approvalLevels || [];
-  };
-
-  const approvalChain = getApprovalChainPreview();
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -292,7 +356,7 @@ function NewRequestForm() {
                       </SelectTrigger>
                       <SelectContent>
                         {assetTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>
+                          <SelectItem key={type.id} value={String(type.id)}>
                             {type.name}
                           </SelectItem>
                         ))}
@@ -305,9 +369,13 @@ function NewRequestForm() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Search Asset</Label>
-                  <Select value={selectedAsset} onValueChange={setSelectedAsset}>
+                  <Select
+                    value={selectedAsset}
+                    onValueChange={setSelectedAsset}
+                    disabled={loadingLookups}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select an asset" />
+                      <SelectValue placeholder={loadingLookups ? "Loading assets..." : "Select an asset"} />
                     </SelectTrigger>
                     <SelectContent>
                       {assets
@@ -319,8 +387,8 @@ function NewRequestForm() {
                             requestType === "buyback"
                         )
                         .map((asset) => (
-                          <SelectItem key={asset.id} value={asset.id}>
-                            {asset.name} ({asset.serialNumber || "No SN"})
+                          <SelectItem key={asset.id} value={String(asset.id)}>
+                            {asset.name} ({asset.serial_number || "No SN"})
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -333,12 +401,12 @@ function NewRequestForm() {
                     <div className="mt-2 grid gap-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Serial Number</span>
-                        <span>{selectedAssetData.serialNumber || "N/A"}</span>
+                        <span>{selectedAssetData.serial_number || "N/A"}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Category</span>
                         <Badge variant="outline" className="capitalize">
-                          {selectedAssetData.category}
+                          {selectedAssetData.asset_type_name}
                         </Badge>
                       </div>
                       <div className="flex justify-between">
@@ -393,13 +461,14 @@ function NewRequestForm() {
                     onValueChange={(v) =>
                       setFormData({ ...formData, toLocationId: v })
                     }
+                    disabled={loadingLookups}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select location" />
                     </SelectTrigger>
                     <SelectContent>
                       {locations.map((loc) => (
-                        <SelectItem key={loc.id} value={loc.id}>
+                        <SelectItem key={loc.id} value={String(loc.id)}>
                           {loc.name}
                         </SelectItem>
                       ))}
@@ -413,6 +482,7 @@ function NewRequestForm() {
                     onValueChange={(v) =>
                       setFormData({ ...formData, toDepartmentId: v })
                     }
+                    disabled={loadingLookups}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select department" />
@@ -422,10 +492,10 @@ function NewRequestForm() {
                         .filter(
                           (d) =>
                             !formData.toLocationId ||
-                            d.locationId === formData.toLocationId
+                            d.location_id === Number(formData.toLocationId)
                         )
                         .map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id}>
+                          <SelectItem key={dept.id} value={String(dept.id)}>
                             {dept.name}
                           </SelectItem>
                         ))}
@@ -443,16 +513,22 @@ function NewRequestForm() {
                   onValueChange={(v) =>
                     setFormData({ ...formData, toUserId: v })
                   }
+                  disabled={loadingLookups}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({user.email})
-                      </SelectItem>
-                    ))}
+                    {users.map((user) => {
+                      const name =
+                        [user.first_name, user.last_name].filter(Boolean).join(" ") ||
+                        user.username;
+                      return (
+                        <SelectItem key={user.id} value={String(user.id)}>
+                          {name} {user.email ? `(${user.email})` : ""}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -577,26 +653,6 @@ function NewRequestForm() {
                   <span className="text-muted-foreground">Reason</span>
                   <span className="mt-1">{formData.reason}</span>
                 </div>
-              </div>
-            </div>
-
-            {/* Approval Chain Preview */}
-            <div className="rounded-lg border p-4">
-              <h4 className="font-medium">Approval Chain</h4>
-              <p className="text-sm text-muted-foreground">
-                Your request will be routed through these approval levels
-              </p>
-              <div className="mt-4 flex items-center gap-2">
-                {approvalChain.map((level, index) => (
-                  <div key={index} className="flex items-center">
-                    <div className="rounded-full bg-muted px-3 py-1 text-sm capitalize">
-                      {level.level}
-                    </div>
-                    {index < approvalChain.length - 1 && (
-                      <ArrowRight className="mx-2 size-4 text-muted-foreground" />
-                    )}
-                  </div>
-                ))}
               </div>
             </div>
 

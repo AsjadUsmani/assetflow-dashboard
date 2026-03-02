@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Plus,
@@ -47,7 +47,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { assetRequests, assets } from "@/lib/mock-data";
+import { getRequests, type AssetRequest } from "@/lib/services/requests";
 
 const statusConfig = {
   draft: { label: "Draft", icon: FileText, color: "bg-muted text-muted-foreground" },
@@ -81,18 +81,28 @@ export default function RequestsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("all");
+  const [requests, setRequests] = useState<AssetRequest[]>([]);
 
-  const getAssetName = (assetId?: string) => {
-    if (!assetId) return "New Asset";
-    const asset = assets.find((a) => a.id === assetId);
-    return asset?.name || "Unknown Asset";
-  };
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const data = await getRequests();
+        if (isMounted) setRequests(data);
+      } catch {
+        // swallow for now - global handler will surface toast
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  const filteredRequests = assetRequests.filter((request) => {
+  const filteredRequests = requests.filter((request) => {
     const matchesSearch =
-      request.requestNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      request.request_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       request.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      getAssetName(request.assetId).toLowerCase().includes(searchQuery.toLowerCase());
+      (request.asset_name ?? "New Asset").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
     const matchesType = typeFilter === "all" || request.type === typeFilter;
     const matchesTab =
@@ -104,11 +114,11 @@ export default function RequestsPage() {
     return matchesSearch && matchesStatus && matchesType && matchesTab;
   });
 
-  const pendingCount = assetRequests.filter((r) =>
+  const pendingCount = requests.filter((r) =>
     ["pending", "in_review"].includes(r.status)
   ).length;
-  const approvedCount = assetRequests.filter((r) => r.status === "approved").length;
-  const rejectedCount = assetRequests.filter((r) => r.status === "rejected").length;
+  const approvedCount = requests.filter((r) => r.status === "approved").length;
+  const rejectedCount = requests.filter((r) => r.status === "rejected").length;
 
   return (
     <>
@@ -196,7 +206,7 @@ export default function RequestsPage() {
           <Card className="border-l-4 border-l-primary">
             <CardHeader className="pb-2">
               <CardDescription>Total Requests</CardDescription>
-              <CardTitle className="text-3xl">{assetRequests.length}</CardTitle>
+              <CardTitle className="text-3xl">{requests.length}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
@@ -287,22 +297,22 @@ export default function RequestsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredRequests.map((request) => {
-                    const status = statusConfig[request.status];
+                    const status = statusConfig[request.status as keyof typeof statusConfig];
                     const type = typeConfig[request.type];
-                    const priority = priorityConfig[request.priority];
+                    const priority = priorityConfig[request.priority as keyof typeof priorityConfig];
                     const StatusIcon = status.icon;
 
                     return (
                       <TableRow key={request.id}>
                         <TableCell className="font-medium">
-                          {request.requestNumber}
+                          {request.request_number}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={type.color}>
                             {type.label}
                           </Badge>
                         </TableCell>
-                        <TableCell>{getAssetName(request.assetId)}</TableCell>
+                        <TableCell>{request.asset_name ?? "New Asset"}</TableCell>
                         <TableCell className="max-w-48 truncate">
                           {request.reason}
                         </TableCell>
@@ -319,11 +329,11 @@ export default function RequestsPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="capitalize">
-                            {request.currentApprovalLevel}
+                            {request.current_approval_level}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {request.requestedAt.toLocaleDateString()}
+                          {new Date(request.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>

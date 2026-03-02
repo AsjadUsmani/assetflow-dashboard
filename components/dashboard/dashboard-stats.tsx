@@ -1,11 +1,9 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Package,
-  Monitor,
-  Recycle,
-  ShoppingCart,
   TrendingUp,
   TrendingDown,
   AlertTriangle,
@@ -15,78 +13,130 @@ import {
   FileText,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { dashboardStats, assetRequests } from "@/lib/mock-data";
+import { getAssets } from "@/lib/services/assets";
+import { getRequests, type AssetRequest } from "@/lib/services/requests";
 
-// Calculate request stats
-const pendingRequests = assetRequests.filter((r) =>
-  ["pending", "in_review"].includes(r.status)
-).length;
-const approvedRequests = assetRequests.filter((r) => r.status === "approved").length;
+type Stat = {
+  title: string;
+  value: string;
+  change: string | null;
+  trend: "up" | "down" | "neutral";
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  href?: string;
+  highlight?: boolean;
+};
 
-const stats = [
-  {
-    title: "Total Assets",
-    value: dashboardStats.totalAssets.toLocaleString(),
-    change: "+12.5%",
-    trend: "up" as const,
-    icon: Package,
-    description: "vs last month",
-    href: "/assets",
-  },
-  {
-    title: "Pending Approvals",
-    value: pendingRequests.toString(),
-    change: null,
-    trend: "neutral" as const,
-    icon: Clock,
-    description: "Awaiting your review",
-    href: "/requests?status=pending",
-    highlight: pendingRequests > 0,
-  },
-  {
-    title: "Approved Today",
-    value: approvedRequests.toString(),
-    change: null,
-    trend: "neutral" as const,
-    icon: CheckCircle,
-    description: "Ready for action",
-    href: "/requests?status=approved",
-  },
-  {
-    title: "Total Requests",
-    value: assetRequests.length.toString(),
-    change: "+24.8%",
-    trend: "up" as const,
-    icon: FileText,
-    description: "This month",
-    href: "/requests",
-  },
-];
-
-const alertStats = [
-  {
-    title: "Expiring Soon",
-    value: dashboardStats.expiringAssets,
-    icon: AlertTriangle,
-    variant: "warning" as const,
-    description: "Within 30 days",
-  },
-  {
-    title: "Accountability Gaps",
-    value: dashboardStats.assetsWithGaps,
-    icon: UserX,
-    variant: "destructive" as const,
-    description: "Missing assignments",
-  },
-];
+type AlertStat = {
+  title: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
+  variant: "warning" | "destructive";
+  description: string;
+};
 
 export function DashboardStats() {
+  const [assetCount, setAssetCount] = useState<number>(0);
+  const [requests, setRequests] = useState<AssetRequest[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const [assetsData, requestsData] = await Promise.all([
+          getAssets(),
+          getRequests(),
+        ]);
+        if (!isMounted) return;
+        setAssetCount(assetsData.length);
+        setRequests(requestsData);
+      } catch {
+        // ignore; global error handler can surface issues if needed
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const { stats, alertStats } = useMemo(() => {
+    const pending = requests.filter((r) =>
+      ["pending", "in_review"].includes(r.status),
+    ).length;
+    const today = new Date().toDateString();
+    const approvedToday = requests.filter(
+      (r) => r.status === "approved" && r.decided_at && new Date(r.decided_at).toDateString() === today,
+    ).length;
+
+    const expiringSoon = 0; // can be derived from assets with expiry_date in future enhancement
+    const accountabilityGaps = 0; // can be derived from assets without assignment in future enhancement
+
+    const stats: Stat[] = [
+      {
+        title: "Total Assets",
+        value: assetCount.toLocaleString(),
+        change: null,
+        trend: "neutral",
+        icon: Package,
+        description: "Across all locations",
+        href: "/assets",
+      },
+      {
+        title: "Pending Approvals",
+        value: pending.toString(),
+        change: null,
+        trend: "neutral",
+        icon: Clock,
+        description: "Awaiting your review",
+        href: "/requests?status=pending",
+        highlight: pending > 0,
+      },
+      {
+        title: "Approved Today",
+        value: approvedToday.toString(),
+        change: null,
+        trend: "neutral",
+        icon: CheckCircle,
+        description: "Requests approved today",
+        href: "/requests?status=approved",
+      },
+      {
+        title: "Total Requests",
+        value: requests.length.toString(),
+        change: null,
+        trend: "neutral",
+        icon: FileText,
+        description: "All time",
+        href: "/requests",
+      },
+    ];
+
+    const alertStats: AlertStat[] = [
+      {
+        title: "Expiring Soon",
+        value: expiringSoon,
+        icon: AlertTriangle,
+        variant: "warning",
+        description: "Within 30 days",
+      },
+      {
+        title: "Accountability Gaps",
+        value: accountabilityGaps,
+        icon: UserX,
+        variant: "destructive",
+        description: "Missing assignments",
+      },
+    ];
+
+    return { stats, alertStats };
+  }, [assetCount, requests]);
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
       {stats.map((stat) => {
         const CardWrapper = stat.href ? Link : "div";
         const cardProps = stat.href ? { href: stat.href } : {};
-        const isHighlight = "highlight" in stat && stat.highlight;
+        const isHighlight = stat.highlight;
 
         return (
           <CardWrapper key={stat.title} {...cardProps}>

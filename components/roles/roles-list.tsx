@@ -28,7 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { mockUsers } from "@/lib/mock-data";
 
 const roles = [
   {

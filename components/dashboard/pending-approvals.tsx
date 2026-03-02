@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRightLeft,
@@ -17,7 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { assetRequests, assets, users } from "@/lib/mock-data";
+import { getRequests, type AssetRequest } from "@/lib/services/requests";
 
 const getRequestIcon = (type: string) => {
   switch (type) {
@@ -40,7 +41,7 @@ const getRequestIcon = (type: string) => {
   }
 };
 
-const getLevelColor = (level: string) => {
+const getLevelColor = (level: string | null) => {
   switch (level) {
     case "location":
       return "bg-blue-500/20 text-blue-400 border-blue-500/30";
@@ -65,7 +66,25 @@ const getPriorityColor = (priority: string) => {
 };
 
 export function PendingApprovals() {
-  const pendingRequests = assetRequests.filter((req) =>
+  const [requests, setRequests] = useState<AssetRequest[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const data = await getRequests();
+        if (!isMounted) return;
+        setRequests(data);
+      } catch {
+        // swallow; global error handler can surface toast separately
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const pendingRequests = requests.filter((req) =>
     ["pending", "in_review"].includes(req.status)
   );
 
@@ -94,12 +113,11 @@ export function PendingApprovals() {
           <div className="space-y-3">
             {pendingRequests.map((request) => {
               const Icon = getRequestIcon(request.type);
-              const asset = request.assetId
-                ? assets.find((a) => a.id === request.assetId)
-                : null;
-              const requester = users.find((u) => u.id === request.requestedBy);
+              const assetName = request.asset_name || "New Asset";
+              const requesterName = request.requested_by_name || "Unknown";
               const daysAgo = Math.floor(
-                (Date.now() - request.requestedAt.getTime()) / (1000 * 60 * 60 * 24)
+                (Date.now() - new Date(request.created_at).getTime()) /
+                  (1000 * 60 * 60 * 24)
               );
 
               return (
@@ -124,25 +142,25 @@ export function PendingApprovals() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium truncate">
-                        {asset?.name || request.assetDetails?.name || "New Asset"}
+                        {assetName}
                       </p>
                       <Badge variant="outline" className="capitalize text-xs">
                         {request.type}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
-                      {request.requestNumber} • by {requester?.name || "Unknown"} •{" "}
+                      {request.request_number} • by {requesterName} •{" "}
                       {daysAgo === 0 ? "Today" : `${daysAgo}d ago`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
-                      className={`text-xs capitalize ${getLevelColor(request.currentApprovalLevel)}`}
+                      className={`text-xs capitalize ${getLevelColor(request.current_approval_level)}`}
                     >
-                      {request.currentApprovalLevel === "ho"
+                      {request.current_approval_level === "ho"
                         ? "Head Office"
-                        : request.currentApprovalLevel}
+                        : request.current_approval_level}
                     </Badge>
                     <ChevronRight className="size-4 text-muted-foreground" />
                   </div>

@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { assets } from "@/lib/mock-data";
 
 export function WorkflowFilters() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -124,22 +123,6 @@ export function WorkflowFilters() {
                         <span className="text-xs">Buyback</span>
                       </Button>
                     </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="asset">Select Asset</Label>
-                    <Select>
-                      <SelectTrigger className="bg-secondary border-0">
-                        <SelectValue placeholder="Choose an asset" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {assets.map((asset) => (
-                          <SelectItem key={asset.id} value={asset.id}>
-                            {asset.name} ({asset.serialNumber || "N/A"})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
 
                   <div className="grid gap-2">

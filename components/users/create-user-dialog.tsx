@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,10 +24,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { mockLocations, mockDepartments } from "@/lib/mock-data";
+import { getLocations, type Location } from "@/lib/services/locations";
+import { getDepartments, type Department } from "@/lib/services/departments";
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const [locs, depts] = await Promise.all([getLocations(), getDepartments()]);
+        if (!isMounted) return;
+        setLocations(locs);
+        setDepartments(depts);
+      } catch {
+        // ignore; dialog can still function without lookups
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,8 +110,8 @@ export function CreateUserDialog() {
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockLocations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id} value={String(location.id)}>
                       {location.name}
                     </SelectItem>
                   ))}
@@ -105,8 +125,8 @@ export function CreateUserDialog() {
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockDepartments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={String(dept.id)}>
                       {dept.name}
                     </SelectItem>
                   ))}

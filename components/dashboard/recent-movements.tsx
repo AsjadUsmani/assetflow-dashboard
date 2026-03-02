@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ArrowRight, Clock, CheckCircle2, XCircle, MoreHorizontal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,54 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { assets, departments, users } from "@/lib/mock-data";
-
-const movements = [
-  {
-    id: "mov-1",
-    assetName: "MacBook Pro 16-inch",
-    assetId: "asset-1",
-    from: "Marketing",
-    to: "Engineering",
-    reason: "Employee transfer",
-    status: "approved" as const,
-    date: "Jan 10, 2024",
-    approvedBy: "Michael Rodriguez",
-  },
-  {
-    id: "mov-2",
-    assetName: "Dell XPS 15",
-    assetId: "asset-2",
-    from: "West Coast Office",
-    to: "Headquarters",
-    reason: "Office consolidation",
-    status: "pending" as const,
-    date: "Jan 15, 2024",
-    approvedBy: null,
-  },
-  {
-    id: "mov-3",
-    assetName: "Standing Desk",
-    assetId: "asset-5",
-    from: "Engineering",
-    to: "Human Resources",
-    reason: "Furniture redistribution",
-    status: "approved" as const,
-    date: "Jan 8, 2024",
-    approvedBy: "David Kim",
-  },
-  {
-    id: "mov-4",
-    assetName: "HP Monitor 27-inch",
-    assetId: "asset-10",
-    from: "Sales",
-    to: "Engineering",
-    reason: "Equipment upgrade",
-    status: "rejected" as const,
-    date: "Jan 5, 2024",
-    approvedBy: "Sarah Chen",
-  },
-];
+import { getRequests, type AssetRequest } from "@/lib/services/requests";
 
 const statusConfig = {
   approved: {
@@ -86,6 +40,31 @@ const statusConfig = {
 };
 
 export function RecentMovements() {
+  const [movements, setMovements] = useState<AssetRequest[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const all = await getRequests();
+        if (!isMounted) return;
+        const movementRequests = all.filter((r) =>
+          ["transfer", "checkout", "return", "maintenance", "disposal"].includes(r.type),
+        );
+        // Show the latest 4 by created_at
+        movementRequests.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+        setMovements(movementRequests.slice(0, 4));
+      } catch {
+        // swallow; global handler can surface toast separately
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -108,19 +87,23 @@ export function RecentMovements() {
           </TableHeader>
           <TableBody>
             {movements.map((movement) => {
-              const status = statusConfig[movement.status];
+              const status = statusConfig[movement.status as keyof typeof statusConfig];
               const StatusIcon = status.icon;
 
               return (
                 <TableRow key={movement.id} className="border-border">
                   <TableCell className="font-medium text-foreground">
-                    {movement.assetName}
+                    {movement.asset_name ?? `Asset #${movement.asset_id ?? ""}`}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">{movement.from}</span>
+                      <span className="text-muted-foreground">
+                        {movement.from_location_name ?? "—"}
+                      </span>
                       <ArrowRight className="size-3 text-muted-foreground" />
-                      <span className="text-foreground">{movement.to}</span>
+                      <span className="text-foreground">
+                        {movement.to_location_name ?? "—"}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
@@ -133,7 +116,7 @@ export function RecentMovements() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {movement.date}
+                    {new Date(movement.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

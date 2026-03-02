@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -31,7 +31,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { mockMovements, assets, locations, users } from "@/lib/mock-data";
 import {
   BarChart,
   Bar,
@@ -41,31 +40,78 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { getRequests, type AssetRequest } from "@/lib/services/requests";
+
+function isMovementType(type: string): boolean {
+  return ["transfer", "checkout", "return", "maintenance", "disposal"].includes(type);
+}
 
 export default function MovementsReportPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [movements, setMovements] = useState<AssetRequest[]>([]);
 
-  const filteredMovements = mockMovements.filter((mov) => {
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const all = await getRequests();
+        if (!isMounted) return;
+        const movementRequests = all.filter((r) => isMovementType(r.type));
+        setMovements(movementRequests);
+      } catch {
+        // swallow; global error handler can surface toast separately
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredMovements = movements.filter((mov) => {
     if (statusFilter !== "all" && mov.status !== statusFilter) return false;
     if (typeFilter !== "all" && mov.type !== typeFilter) return false;
     return true;
   });
 
-  const completedCount = mockMovements.filter((m) => m.status === "completed").length;
-  const pendingCount = mockMovements.filter((m) => m.status === "pending").length;
-  const approvedCount = mockMovements.filter((m) => m.status === "approved").length;
-  const rejectedCount = mockMovements.filter((m) => m.status === "rejected").length;
+  const completedCount = movements.filter((m) => m.status === "completed").length;
+  const pendingCount = movements.filter((m) => m.status === "pending").length;
+  const approvedCount = movements.filter((m) => m.status === "approved").length;
+  const rejectedCount = movements.filter((m) => m.status === "rejected").length;
 
-  // Monthly movement data (mock)
-  const monthlyData = [
-    { month: "Jan", transfers: 12, disposals: 3, assignments: 8 },
-    { month: "Feb", transfers: 18, disposals: 5, assignments: 12 },
-    { month: "Mar", transfers: 15, disposals: 2, assignments: 10 },
-    { month: "Apr", transfers: 22, disposals: 4, assignments: 15 },
-    { month: "May", transfers: 19, disposals: 6, assignments: 11 },
-    { month: "Jun", transfers: 25, disposals: 3, assignments: 18 },
-  ];
+  const monthlyData = useMemo(() => {
+    // Build last 6 months series
+    const now = new Date();
+    const monthKeys: string[] = [];
+    const monthOrder: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const k = d.toLocaleString("en-US", { month: "short" });
+      monthKeys.push(k);
+      monthOrder.push(k);
+    }
+    const base: Record<string, { transfers: number; disposals: number; assignments: number }> =
+      {};
+    monthKeys.forEach((m) => {
+      base[m] = { transfers: 0, disposals: 0, assignments: 0 };
+    });
+
+    movements.forEach((m) => {
+      const d = new Date(m.created_at);
+      const key = d.toLocaleString("en-US", { month: "short" });
+      if (!base[key]) return;
+      if (m.type === "transfer") base[key].transfers += 1;
+      else if (m.type === "assign") base[key].assignments += 1;
+      else if (m.type === "dispose" || m.type === "buyback") base[key].disposals += 1;
+    });
+
+    return monthOrder.map((m) => ({
+      month: m,
+      transfers: base[m]?.transfers ?? 0,
+      disposals: base[m]?.disposals ?? 0,
+      assignments: base[m]?.assignments ?? 0,
+    }));
+  }, [movements]);
 
   return (
     <>
@@ -258,7 +304,6 @@ export default function MovementsReportPage() {
               </TableHeader>
               <TableBody>
                 {filteredMovements.map((movement) => {
-                  const asset = assets.find((a) => a.id === movement.assetId);
                   const statusColors = {
                     pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
                     approved: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -274,30 +319,32 @@ export default function MovementsReportPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {asset?.name || "Unknown Asset"}
+                        {movement.asset_name ?? `Asset #${movement.asset_id ?? ""}`}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <p>{movement.fromLocation}</p>
-                          {movement.fromDepartment && (
+                          <p>{movement.from_location_name ?? "—"}</p>
+                          {movement.from_department_id && (
                             <p className="text-muted-foreground text-xs">
-                              {movement.fromDepartment}
+                              Department #{movement.from_department_id}
                             </p>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <p>{movement.toLocation}</p>
-                          {movement.toDepartment && (
+                          <p>{movement.to_location_name ?? "—"}</p>
+                          {movement.to_department_id && (
                             <p className="text-muted-foreground text-xs">
-                              {movement.toDepartment}
+                              Department #{movement.to_department_id}
                             </p>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{movement.requestedBy}</TableCell>
-                      <TableCell>{movement.requestedDate}</TableCell>
+                      <TableCell>{movement.requested_by_name}</TableCell>
+                      <TableCell>
+                        {new Date(movement.created_at).toLocaleDateString()}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"

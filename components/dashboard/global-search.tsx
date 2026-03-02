@@ -21,7 +21,10 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { assets, users, locations, departments } from "@/lib/mock-data";
+import { getAssets, type Asset } from "@/lib/services/assets";
+import { getWorkspaceUsers, type WorkspaceUser } from "@/lib/services/workspace-users";
+import { getLocations, type Location } from "@/lib/services/locations";
+import { getDepartments, type Department } from "@/lib/services/departments";
 
 interface SearchResult {
   id: string;
@@ -36,8 +39,37 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [users, setUsers] = useState<WorkspaceUser[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  // Load data once for search index
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const [assetData, userData, locationData, departmentData] = await Promise.all([
+          getAssets(),
+          getWorkspaceUsers(),
+          getLocations(),
+          getDepartments(),
+        ]);
+        if (!isMounted) return;
+        setAssets(assetData);
+        setUsers(userData);
+        setLocations(locationData);
+        setDepartments(departmentData);
+      } catch {
+        // ignore; search will just return no results on failure
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Keyboard shortcut to open search
   useEffect(() => {
@@ -63,20 +95,20 @@ export function GlobalSearch() {
 
     // Search assets by name, serial number, hostname, username
     assets.forEach((asset) => {
-      const hostname = asset.properties?.hostname as string | undefined;
-      const username = asset.properties?.username as string | undefined;
-      
+      const hostname = asset.property_values?.hostname as string | undefined;
+      const username = asset.property_values?.username as string | undefined;
+
       if (
         asset.name.toLowerCase().includes(searchQuery) ||
-        asset.serialNumber?.toLowerCase().includes(searchQuery) ||
+        (asset.serial_number ?? "").toLowerCase().includes(searchQuery) ||
         hostname?.toLowerCase().includes(searchQuery) ||
         username?.toLowerCase().includes(searchQuery)
       ) {
         searchResults.push({
-          id: asset.id,
+          id: String(asset.id),
           type: "asset",
           title: asset.name,
-          subtitle: asset.serialNumber || "No serial number",
+          subtitle: asset.serial_number || "No serial number",
           metadata: asset.status,
           href: `/assets/${asset.id}`,
         });
@@ -85,29 +117,33 @@ export function GlobalSearch() {
 
     // Search users
     users.forEach((user) => {
+      const fullName =
+        [user.first_name, user.last_name].filter(Boolean).join(" ") || user.username;
+      const email = user.email ?? "";
       if (
-        user.name.toLowerCase().includes(searchQuery) ||
-        user.email.toLowerCase().includes(searchQuery)
+        fullName.toLowerCase().includes(searchQuery) ||
+        email.toLowerCase().includes(searchQuery)
       ) {
         searchResults.push({
-          id: user.id,
+          id: String(user.id),
           type: "user",
-          title: user.name,
-          subtitle: user.email,
-          metadata: user.role.replace("_", " "),
-          href: `/users?search=${user.name}`,
+          title: fullName,
+          subtitle: email || user.username,
+          metadata: user.role_name ?? undefined,
+          href: `/users?search=${encodeURIComponent(fullName)}`,
         });
       }
     });
 
     // Search locations
     locations.forEach((location) => {
+      const address = location.address.toLowerCase();
       if (
         location.name.toLowerCase().includes(searchQuery) ||
-        location.address.toLowerCase().includes(searchQuery)
+        address.includes(searchQuery)
       ) {
         searchResults.push({
-          id: location.id,
+          id: String(location.id),
           type: "location",
           title: location.name,
           subtitle: location.address,
@@ -119,18 +155,22 @@ export function GlobalSearch() {
     // Search departments
     departments.forEach((dept) => {
       if (dept.name.toLowerCase().includes(searchQuery)) {
+        const locationName =
+          dept.location_name ??
+          locations.find((l) => l.id === dept.location_id)?.name ??
+          "Unknown";
         searchResults.push({
-          id: dept.id,
+          id: String(dept.id),
           type: "department",
           title: dept.name,
-          subtitle: `Location: ${locations.find((l) => l.id === dept.locationId)?.name || "Unknown"}`,
+          subtitle: `Location: ${locationName}`,
           href: `/departments/${dept.id}`,
         });
       }
     });
 
     setResults(searchResults.slice(0, 10));
-  }, [query]);
+  }, [query, assets, users, locations, departments]);
 
   const getIcon = (type: SearchResult["type"]) => {
     switch (type) {

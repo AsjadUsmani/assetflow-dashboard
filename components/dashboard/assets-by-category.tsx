@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   PieChart,
@@ -9,32 +10,31 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { dashboardStats } from "@/lib/mock-data";
+import { getAssets, type Asset } from "@/lib/services/assets";
 
-const data = [
-  {
-    name: "Physical",
-    value: dashboardStats.assetsByCategory.physical,
-    color: "var(--chart-1)",
-  },
-  {
-    name: "Digital",
-    value: dashboardStats.assetsByCategory.digital,
-    color: "var(--chart-2)",
-  },
-  {
-    name: "Consumable",
-    value: dashboardStats.assetsByCategory.consumable,
-    color: "var(--chart-3)",
-  },
-  {
-    name: "Rechargeable",
-    value: dashboardStats.assetsByCategory.rechargeable,
-    color: "var(--chart-4)",
-  },
-];
+type CategorySlice = {
+  name: string;
+  value: number;
+  color: string;
+};
 
-const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number; payload: { color: string } }> }) => {
+const COLORS: Record<string, string> = {
+  physical: "var(--chart-1)",
+  digital: "var(--chart-2)",
+  consumable: "var(--chart-3)",
+  rechargeable: "var(--chart-4)",
+  other: "var(--chart-5)",
+};
+
+const CustomTooltip = ({
+  active,
+  payload,
+  total,
+}: {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number; payload: { color: string } }>;
+  total: number;
+}) => {
   if (active && payload && payload.length) {
     return (
       <div className="rounded-lg border border-border bg-card p-3 shadow-lg">
@@ -43,8 +43,7 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
           {payload[0].value.toLocaleString()}
         </p>
         <p className="text-xs text-muted-foreground">
-          {((payload[0].value / dashboardStats.totalAssets) * 100).toFixed(1)}%
-          of total
+          {total ? ((payload[0].value / total) * 100).toFixed(1) : "0.0"}% of total
         </p>
       </div>
     );
@@ -53,6 +52,45 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
 };
 
 export function AssetsByCategory() {
+  const [assets, setAssets] = useState<Asset[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const data = await getAssets();
+        if (!isMounted) return;
+        setAssets(data);
+      } catch {
+        // ignore; empty chart is acceptable fallback
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const data: CategorySlice[] = useMemo(() => {
+    if (!assets.length) return [];
+    const buckets: Record<string, number> = {};
+
+    assets.forEach((asset) => {
+      const key = asset.asset_type_name || "Other";
+      buckets[key] = (buckets[key] ?? 0) + 1;
+    });
+
+    return Object.entries(buckets).map(([name, value], index) => ({
+      name,
+      value,
+      color: Object.values(COLORS)[index % Object.values(COLORS).length],
+    }));
+  }, [assets]);
+
+  const total = useMemo(
+    () => data.reduce((sum, item) => sum + item.value, 0),
+    [data],
+  );
+
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2">
@@ -77,7 +115,7 @@ export function AssetsByCategory() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip total={total} />} />
               <Legend
                 verticalAlign="bottom"
                 height={36}

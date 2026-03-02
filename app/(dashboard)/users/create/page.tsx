@@ -26,6 +26,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { apiService } from "@/lib/services/api-service"
 import { useToast } from "@/components/ui/use-toast"
+import { getDepartments, type Department } from "@/lib/services/departments"
 
 type Role = { id: number; name: string }
 
@@ -34,6 +35,7 @@ export default function AddUserPage() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = React.useState(false)
   const [roles, setRoles] = React.useState<Role[]>([])
+  const [departments, setDepartments] = React.useState<Department[]>([])
 
   const [username, setUsername] = React.useState("")
   const [email, setEmail] = React.useState("")
@@ -43,15 +45,23 @@ export default function AddUserPage() {
   const [roleId, setRoleId] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [isActive, setIsActive] = React.useState(true)
+  const [departmentId, setDepartmentId] = React.useState("")
 
   React.useEffect(() => {
     const controller = new AbortController()
     async function load() {
       try {
-        const res = await apiService.get<Role[]>("/workspace/roles")
-        if (!controller.signal.aborted && res.data) setRoles(res.data)
+        const [rolesRes, depts] = await Promise.all([
+          apiService.get<Role[]>("/workspace/roles"),
+          getDepartments(),
+        ])
+        if (controller.signal.aborted) return
+        setRoles(rolesRes.data ?? [])
+        setDepartments(depts)
       } catch {
-        if (!controller.signal.aborted) setRoles([])
+        if (controller.signal.aborted) return
+        setRoles([])
+        setDepartments([])
       }
     }
     void load()
@@ -84,7 +94,7 @@ export default function AddUserPage() {
 
     setIsLoading(true)
     try {
-      await apiService.post("/workspace/users", {
+      const res = await apiService.post("/workspace/users", {
         username: username.trim(),
         email: email.trim() || null,
         mobile: mobile.trim() || null,
@@ -94,6 +104,20 @@ export default function AddUserPage() {
         role_id: Number(roleId),
         is_active: isActive,
       })
+
+      const newUserId = (res as any)?.data?.id as number | undefined
+
+      // If a department is selected, mark this user as that department's HOD.
+      // If no department is selected, the user acts as a global admin based on role only.
+      if (newUserId && departmentId) {
+        try {
+          await apiService.put(`/workspace/departments/${departmentId}`, {
+            hod_id: newUserId,
+          })
+        } catch {
+          // If this fails we still keep the user; optional toast could be added later.
+        }
+      }
       toast({
         title: "User created",
         description: "The user has been added.",
@@ -221,6 +245,30 @@ export default function AddUserPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="department">
+                      Department (optional for HOD / location admin)
+                    </Label>
+                    <Select
+                      value={departmentId}
+                      onValueChange={setDepartmentId}
+                    >
+                      <SelectTrigger id="department">
+                        <SelectValue placeholder="All departments (global admin)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map((d) => (
+                          <SelectItem key={d.id} value={String(d.id)}>
+                            {d.location_name ? `${d.location_name} – ${d.name}` : d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Leave empty to make this user an admin for all departments. If you choose a
+                      department, this user becomes the Head of that department for approvals.
+                    </p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Switch

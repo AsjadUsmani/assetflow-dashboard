@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,20 +23,67 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { assets, locations, departments } from "@/lib/mock-data";
-
-const mockAssets = assets;
-const mockLocations = locations;
-const mockDepartments = departments;
+import { getAssets } from "@/lib/services/assets";
+import { createRequest } from "@/lib/services/requests";
+import { getLocations, type Location } from "@/lib/services/locations";
+import { getDepartments, type Department } from "@/lib/services/departments";
 
 export function RequestMovementDialog() {
   const [open, setOpen] = useState(false);
   const [movementType, setMovementType] = useState("");
   const [selectedAsset, setSelectedAsset] = useState("");
+  const [assets, setAssets] = useState<
+    { id: number; name: string; serial_number: string | null }[]
+  >([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [fromLocationId, setFromLocationId] = useState<string>("");
+  const [toLocationId, setToLocationId] = useState<string>("");
+  const [fromDepartmentId, setFromDepartmentId] = useState<string>("");
+  const [toDepartmentId, setToDepartmentId] = useState<string>("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const [assetsData, locationsData, departmentsData] = await Promise.all([
+          getAssets(),
+          getLocations(),
+          getDepartments(),
+        ]);
+        if (!isMounted) return;
+        setAssets(
+          assetsData.map((a) => ({
+            id: a.id,
+            name: a.name,
+            serial_number: a.serial_number,
+          })),
+        );
+        setLocations(locationsData);
+        setDepartments(departmentsData);
+      } catch {
+        // ignore, global error handler will display if needed
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
+    if (!movementType) return;
+
+    await createRequest({
+      type: movementType,
+      asset_id: selectedAsset ? Number(selectedAsset) : undefined,
+      from_location_id: fromLocationId ? Number(fromLocationId) : undefined,
+      to_location_id: toLocationId ? Number(toLocationId) : undefined,
+      from_department_id: fromDepartmentId ? Number(fromDepartmentId) : undefined,
+      to_department_id: toDepartmentId ? Number(toDepartmentId) : undefined,
+      reason: "Movement request from Movements screen",
+    });
+
     setOpen(false);
   };
 
@@ -79,9 +126,10 @@ export function RequestMovementDialog() {
                   <SelectValue placeholder="Select asset" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockAssets.map((asset) => (
-                    <SelectItem key={asset.id} value={asset.id}>
-                      {asset.name} ({asset.assetTag})
+                  {assets.map((asset) => (
+                    <SelectItem key={asset.id} value={String(asset.id)}>
+                      {asset.name}
+                      {asset.serial_number ? ` (${asset.serial_number})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -91,13 +139,13 @@ export function RequestMovementDialog() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="from-location">From Location</Label>
-                <Select>
+                <Select value={fromLocationId} onValueChange={setFromLocationId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Current location" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockLocations.map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={String(location.id)}>
                         {location.name}
                       </SelectItem>
                     ))}
@@ -106,13 +154,13 @@ export function RequestMovementDialog() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="to-location">To Location</Label>
-                <Select>
+                <Select value={toLocationId} onValueChange={setToLocationId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Destination" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockLocations.map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={String(location.id)}>
                         {location.name}
                       </SelectItem>
                     ))}
@@ -124,31 +172,49 @@ export function RequestMovementDialog() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="from-department">From Department</Label>
-                <Select>
+                <Select
+                  value={fromDepartmentId}
+                  onValueChange={setFromDepartmentId}
+                  disabled={!fromLocationId}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Current dept" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockDepartments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
+                    {departments
+                      .filter(
+                        (d) =>
+                          !fromLocationId || d.location_id === Number(fromLocationId),
+                      )
+                      .map((dept) => (
+                        <SelectItem key={dept.id} value={String(dept.id)}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="to-department">To Department</Label>
-                <Select>
+                <Select
+                  value={toDepartmentId}
+                  onValueChange={setToDepartmentId}
+                  disabled={!toLocationId}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Destination dept" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockDepartments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
+                    {departments
+                      .filter(
+                        (d) =>
+                          !toLocationId || d.location_id === Number(toLocationId),
+                      )
+                      .map((dept) => (
+                        <SelectItem key={dept.id} value={String(dept.id)}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

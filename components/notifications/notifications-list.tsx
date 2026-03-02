@@ -36,7 +36,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { notifications, assets } from "@/lib/mock-data";
 import type { Notification } from "@/lib/types";
 
 const getNotificationIcon = (type: Notification["type"]) => {
@@ -84,9 +83,6 @@ function NotificationCard({
 }) {
   const Icon = getNotificationIcon(notification.type);
   const colorClass = getNotificationColor(notification.type);
-  const asset = notification.relatedAssetId
-    ? assets.find((a) => a.id === notification.relatedAssetId)
-    : null;
   const timeAgo = getTimeAgo(notification.createdAt);
 
   return (
@@ -117,15 +113,6 @@ function NotificationCard({
             </span>
           </div>
         </div>
-
-        {asset && (
-          <Link
-            href={`/assets/${asset.id}`}
-            className="mt-2 inline-flex items-center gap-2 rounded-md bg-secondary px-2 py-1 text-xs hover:bg-secondary/80"
-          >
-            Related: {asset.name}
-          </Link>
-        )}
 
         <div className="mt-3 flex items-center gap-2">
           {!notification.read && (
@@ -207,7 +194,7 @@ function getTimeAgo(date: Date): string {
 }
 
 export function NotificationsList() {
-  const [notificationState, setNotificationState] = useState(notifications);
+  const [notificationState, setNotificationState] = useState<Notification[]>([]);
   const [filter, setFilter] = useState("all");
 
   const unreadCount = notificationState.filter((n) => !n.read).length;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -39,13 +39,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
-import { assetRequests, assets, users, locations, departments } from "@/lib/mock-data";
-import { currentUser } from "@/lib/mock-data";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { getRequestById, decideRequest, type AssetRequest } from "@/lib/services/requests";
 
 const statusConfig = {
   draft: { label: "Draft", icon: FileText, color: "bg-muted text-muted-foreground" },
@@ -73,10 +68,62 @@ export default function RequestDetailPage() {
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [comments, setComments] = useState("");
+  const [request, setRequest] = useState<AssetRequest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const request = assetRequests.find((r) => r.id === params.id);
+  const numericId = Number(params.id);
 
-  if (!request) {
+  useEffect(() => {
+    if (Number.isNaN(numericId)) {
+      setError("Invalid request id");
+      setLoading(false);
+      return;
+    }
+    let isMounted = true;
+    (async () => {
+      try {
+        const data = await getRequestById(numericId);
+        if (!isMounted) return;
+        if (!data) {
+          setError("Request not found");
+        } else {
+          setRequest(data);
+        }
+      } catch {
+        if (!isMounted) return;
+        setError("Failed to load request");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [numericId]);
+
+  if (loading) {
+    return (
+      <>
+        <AppHeader
+          breadcrumbs={[
+            { label: "Home", href: "/" },
+            { label: "Requests", href: "/requests" },
+            { label: "Loading" },
+          ]}
+        />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6 text-center">
+              <p className="text-muted-foreground">Loading request...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
+
+  if (!request || error) {
     return (
       <>
         <AppHeader
@@ -92,7 +139,7 @@ export default function RequestDetailPage() {
               <AlertCircle className="mx-auto size-12 text-muted-foreground" />
               <h2 className="mt-4 text-xl font-semibold">Request Not Found</h2>
               <p className="mt-2 text-muted-foreground">
-                The request you are looking for does not exist.
+                {error || "The request you are looking for does not exist."}
               </p>
               <Button className="mt-4" asChild>
                 <Link href="/requests">Back to Requests</Link>
@@ -104,44 +151,46 @@ export default function RequestDetailPage() {
     );
   }
 
-  const status = statusConfig[request.status];
-  const type = typeConfig[request.type];
+  const status = statusConfig[request.status as keyof typeof statusConfig];
+  const type = typeConfig[request.type as keyof typeof typeConfig];
   const StatusIcon = status.icon;
 
-  const asset = request.assetId ? assets.find((a) => a.id === request.assetId) : null;
-  const requester = users.find((u) => u.id === request.requestedBy);
-  const fromLocation = request.fromLocationId
-    ? locations.find((l) => l.id === request.fromLocationId)
-    : null;
-  const toLocation = request.toLocationId
-    ? locations.find((l) => l.id === request.toLocationId)
-    : null;
-  const fromDepartment = request.fromDepartmentId
-    ? departments.find((d) => d.id === request.fromDepartmentId)
-    : null;
-  const toDepartment = request.toDepartmentId
-    ? departments.find((d) => d.id === request.toDepartmentId)
-    : null;
-  const toUser = request.toUserId ? users.find((u) => u.id === request.toUserId) : null;
+  const approvalLevelLabel =
+    request.current_approval_level === "location"
+      ? "Location HOD / Local Approver"
+      : request.current_approval_level === "ho"
+      ? "Head Office Admin"
+      : request.current_approval_level === "completed"
+      ? "Completed"
+      : request.current_approval_level === "rejected"
+      ? "Rejected"
+      : request.current_approval_level || "Not started";
 
-  // Check if current user can approve
-  const pendingStep = request.approvalChain.find((step) => step.status === "pending");
-  const canApprove =
-    pendingStep &&
-    (pendingStep.approverId === currentUser.id ||
-      currentUser.role === "super_admin" ||
-      currentUser.role === "ho_admin");
+  const assetName = request.asset_name ?? "Asset";
+  const requestedByName = request.requested_by_name;
 
-  const handleApprove = () => {
-    // In real app, this would call an API
-    setApproveDialogOpen(false);
-    setComments("");
+  const canApprove = request.status === "pending" || request.status === "in_review";
+
+  const handleApprove = async () => {
+    try {
+      const updated = await decideRequest(request.id, { decision: "approve", comment: comments });
+      setRequest(updated);
+      setApproveDialogOpen(false);
+      setComments("");
+    } catch {
+      setApproveDialogOpen(false);
+    }
   };
 
-  const handleReject = () => {
-    // In real app, this would call an API
-    setRejectDialogOpen(false);
-    setComments("");
+  const handleReject = async () => {
+    try {
+      const updated = await decideRequest(request.id, { decision: "reject", comment: comments });
+      setRequest(updated);
+      setRejectDialogOpen(false);
+      setComments("");
+    } catch {
+      setRejectDialogOpen(false);
+    }
   };
 
   return (
@@ -150,7 +199,7 @@ export default function RequestDetailPage() {
         breadcrumbs={[
           { label: "Home", href: "/" },
           { label: "Requests", href: "/requests" },
-          { label: request.requestNumber },
+          { label: request.request_number },
         ]}
       />
       <div className="flex flex-1 flex-col gap-6 p-6">
@@ -163,7 +212,7 @@ export default function RequestDetailPage() {
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">
-                {request.requestNumber}
+                {request.request_number}
               </h1>
               <Badge variant="outline" className={type.color}>
                 {type.label}
@@ -197,13 +246,12 @@ export default function RequestDetailPage() {
         </div>
 
         {/* Pending Approval Alert */}
-        {pendingStep && canApprove && (
+        {canApprove && (
           <Alert className="border-amber-500/50 bg-amber-500/10">
             <AlertCircle className="size-4 text-amber-400" />
             <AlertTitle className="text-amber-400">Approval Required</AlertTitle>
             <AlertDescription>
-              This request is waiting for your approval at the{" "}
-              <span className="font-semibold capitalize">{pendingStep.level}</span> level.
+              This request is waiting for approval. Use the buttons above to approve or reject.
             </AlertDescription>
           </Alert>
         )}
@@ -220,45 +268,16 @@ export default function RequestDetailPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {asset ? (
+                {assetName ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <p className="text-sm text-muted-foreground">Asset Name</p>
-                      <p className="font-medium">{asset.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Serial Number</p>
-                      <p className="font-medium">{asset.serialNumber || "N/A"}</p>
+                      <p className="font-medium">{assetName}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Category</p>
                       <Badge variant="outline" className="mt-1 capitalize">
-                        {asset.category}
-                      </Badge>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <Badge variant="outline" className="mt-1 capitalize">
-                        {asset.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ) : request.assetDetails ? (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Asset Name</p>
-                      <p className="font-medium">{request.assetDetails.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Serial Number</p>
-                      <p className="font-medium">
-                        {request.assetDetails.serialNumber || "To be assigned"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Category</p>
-                      <Badge variant="outline" className="mt-1 capitalize">
-                        {request.assetDetails.category}
+                        {request.type}
                       </Badge>
                     </div>
                   </div>
@@ -267,68 +286,6 @@ export default function RequestDetailPage() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Transfer Details */}
-            {(request.type === "transfer" ||
-              request.type === "assign" ||
-              request.type === "return") && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>
-                    {request.type === "transfer" ? "Transfer" : "Assignment"} Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4">
-                    {/* From */}
-                    <div className="flex-1 rounded-lg border border-dashed p-4">
-                      <p className="text-sm font-medium text-muted-foreground">From</p>
-                      <div className="mt-2 space-y-2">
-                        {fromLocation && (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="size-4 text-muted-foreground" />
-                            <span>{fromLocation.name}</span>
-                          </div>
-                        )}
-                        {fromDepartment && (
-                          <div className="flex items-center gap-2">
-                            <Building className="size-4 text-muted-foreground" />
-                            <span>{fromDepartment.name}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <ChevronRight className="size-6 text-muted-foreground" />
-
-                    {/* To */}
-                    <div className="flex-1 rounded-lg border border-primary/50 bg-primary/5 p-4">
-                      <p className="text-sm font-medium text-primary">To</p>
-                      <div className="mt-2 space-y-2">
-                        {toLocation && (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="size-4 text-primary" />
-                            <span>{toLocation.name}</span>
-                          </div>
-                        )}
-                        {toDepartment && (
-                          <div className="flex items-center gap-2">
-                            <Building className="size-4 text-primary" />
-                            <span>{toDepartment.name}</span>
-                          </div>
-                        )}
-                        {toUser && (
-                          <div className="flex items-center gap-2">
-                            <User className="size-4 text-primary" />
-                            <span>{toUser.name}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Justification */}
             {request.justification && (
@@ -342,29 +299,14 @@ export default function RequestDetailPage() {
               </Card>
             )}
 
-            {/* Documents */}
-            {request.documents && request.documents.length > 0 && (
+            {/* Decision comment (from approver) */}
+            {request.decision_comment && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Supporting Documents</CardTitle>
+                  <CardTitle>Decision Comment</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {request.documents.map((doc, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between rounded-lg border p-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="size-5 text-muted-foreground" />
-                          <span>{doc}</span>
-                        </div>
-                        <Button variant="ghost" size="sm">
-                          <Download className="size-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-muted-foreground">{request.decision_comment}</p>
                 </CardContent>
               </Card>
             )}
@@ -382,7 +324,7 @@ export default function RequestDetailPage() {
                   <p className="text-sm text-muted-foreground">Requested By</p>
                   <div className="mt-1 flex items-center gap-2">
                     <User className="size-4 text-muted-foreground" />
-                    <span className="font-medium">{requester?.name || "Unknown"}</span>
+                    <span className="font-medium">{requestedByName || "Unknown"}</span>
                   </div>
                 </div>
                 <Separator />
@@ -391,119 +333,39 @@ export default function RequestDetailPage() {
                   <div className="mt-1 flex items-center gap-2">
                     <Calendar className="size-4 text-muted-foreground" />
                     <span className="font-medium">
-                      {request.requestedAt.toLocaleDateString()}
+                      {new Date(request.created_at).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
                 <Separator />
                 <div>
                   <p className="text-sm text-muted-foreground">Priority</p>
-                  <Badge
-                    variant="outline"
-                    className={`mt-1 capitalize ${
-                      request.priority === "urgent"
-                        ? "border-red-500/50 text-red-400"
-                        : request.priority === "high"
-                          ? "border-amber-500/50 text-amber-400"
-                          : ""
-                    }`}
-                  >
+                  <Badge variant="outline" className="mt-1 capitalize">
                     {request.priority}
                   </Badge>
                 </div>
-                {request.requiresAcknowledgement && (
-                  <>
-                    <Separator />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Acknowledgement</p>
-                      <Badge
-                        variant="outline"
-                        className={`mt-1 ${
-                          request.acknowledgedAt
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-amber-500/20 text-amber-400"
-                        }`}
-                      >
-                        {request.acknowledgedAt ? "Acknowledged" : "Pending"}
-                      </Badge>
-                    </div>
-                  </>
-                )}
               </CardContent>
             </Card>
 
-            {/* Approval Timeline */}
+            {/* Simple approval status summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Approval Timeline</CardTitle>
-                <CardDescription>Track the approval progress</CardDescription>
+                <CardTitle>Approval Status</CardTitle>
+                <CardDescription>Current state of this request</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="relative space-y-4">
-                  {request.approvalChain.map((step, index) => {
-                    const isLast = index === request.approvalChain.length - 1;
-                    const isPending = step.status === "pending";
-                    const isApproved = step.status === "approved";
-                    const isRejected = step.status === "rejected";
-
-                    return (
-                      <div key={index} className="relative flex gap-4">
-                        {/* Line */}
-                        {!isLast && (
-                          <div
-                            className={`absolute left-3 top-8 h-full w-0.5 ${
-                              isApproved ? "bg-green-500" : "bg-border"
-                            }`}
-                          />
-                        )}
-
-                        {/* Icon */}
-                        <div
-                          className={`relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full ${
-                            isApproved
-                              ? "bg-green-500"
-                              : isRejected
-                                ? "bg-red-500"
-                                : isPending
-                                  ? "bg-amber-500"
-                                  : "bg-muted"
-                          }`}
-                        >
-                          {isApproved ? (
-                            <CheckCircle className="size-4 text-white" />
-                          ) : isRejected ? (
-                            <XCircle className="size-4 text-white" />
-                          ) : (
-                            <Clock className="size-3 text-white" />
-                          )}
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 pb-4">
-                          <div className="flex items-center justify-between">
-                            <p className="font-medium capitalize">{step.level} Level</p>
-                            {step.actionAt && (
-                              <span className="text-xs text-muted-foreground">
-                                {step.actionAt.toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {step.approverName}
-                          </p>
-                          {step.comments && (
-                            <div className="mt-2 flex items-start gap-2 rounded-md bg-muted/50 p-2">
-                              <MessageSquare className="mt-0.5 size-3 text-muted-foreground" />
-                              <p className="text-sm text-muted-foreground">
-                                {step.comments}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+              <CardContent className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <StatusIcon className="size-4 text-muted-foreground" />
+                  <span className="font-medium capitalize">{request.status}</span>
                 </div>
+                <div className="text-sm text-muted-foreground">
+                  Level: <span className="font-medium">{approvalLevelLabel}</span>
+                </div>
+                {request.decided_at && (
+                  <div className="text-sm text-muted-foreground">
+                    Decided at {new Date(request.decided_at).toLocaleString()}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Eye,
@@ -34,22 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { mockMovements, assets } from "@/lib/mock-data";
-
-interface Movement {
-  id: string;
-  assetId: string;
-  type: "transfer" | "checkout" | "return" | "maintenance" | "disposal";
-  fromLocation: string;
-  fromDepartment?: string;
-  toLocation: string;
-  toDepartment?: string;
-  requestedBy: string;
-  requestedDate: string;
-  status: "pending" | "approved" | "rejected" | "completed";
-  approvedBy?: string;
-  notes?: string;
-}
+import { getRequests, type AssetRequest } from "@/lib/services/requests";
 
 const statusConfig = {
   pending: {
@@ -88,35 +73,60 @@ const typeConfig = {
   },
 };
 
-export function MovementsTable() {
-  const [selectedMovements, setSelectedMovements] = useState<string[]>([]);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [selectedMovement, setSelectedMovement] = useState<Movement | null>(
-    null
-  );
+function isMovementType(type: string): type is keyof typeof typeConfig {
+  return ["transfer", "checkout", "return", "maintenance", "disposal"].includes(type);
+}
 
-  const getAssetName = (assetId: string) => {
-    const asset = assets.find((a) => a.id === assetId);
-    return asset?.name || "Unknown Asset";
+export function MovementsTable() {
+  const [selectedMovements, setSelectedMovements] = useState<number[]>([]);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedMovement, setSelectedMovement] = useState<AssetRequest | null>(null);
+  const [movements, setMovements] = useState<AssetRequest[]>([]);
+
+  const getAssetName = (assetId: number | null, fallbackName: string | null) => {
+    if (fallbackName) return fallbackName;
+    if (!assetId) return "Unknown Asset";
+    return `Asset #${assetId}`;
   };
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const all = await getRequests();
+        if (!isMounted) return;
+        const movementRequests = all.filter(
+          (r) =>
+            isMovementType(r.type) &&
+            ["pending", "approved", "rejected", "completed"].includes(r.status),
+        );
+        setMovements(movementRequests);
+      } catch {
+        // ignore, global error handler will surface if needed
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedMovements(mockMovements.map((m) => m.id));
+      setSelectedMovements(movements.map((m) => m.id));
     } else {
       setSelectedMovements([]);
     }
   };
 
-  const handleSelectMovement = (movementId: string, checked: boolean) => {
+  const handleSelectMovement = (movementId: number, checked: boolean) => {
     if (checked) {
-      setSelectedMovements([...selectedMovements, movementId]);
+      setSelectedMovements((prev) => [...prev, movementId]);
     } else {
-      setSelectedMovements(selectedMovements.filter((id) => id !== movementId));
+      setSelectedMovements((prev) => prev.filter((id) => id !== movementId));
     }
   };
 
-  const handleView = (movement: Movement) => {
+  const handleView = (movement: AssetRequest) => {
     setSelectedMovement(movement);
     setViewDialogOpen(true);
   };
@@ -129,7 +139,7 @@ export function MovementsTable() {
             <TableRow className="border-border hover:bg-transparent">
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedMovements.length === mockMovements.length}
+                  checked={selectedMovements.length === movements.length && movements.length > 0}
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
@@ -145,10 +155,11 @@ export function MovementsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockMovements.map((movement) => {
-              const status = statusConfig[movement.status];
+            {movements.map((movement) => {
+              const status =
+                statusConfig[movement.status as keyof typeof statusConfig];
               const StatusIcon = status.icon;
-              const type = typeConfig[movement.type];
+              const type = typeConfig[movement.type as keyof typeof typeConfig];
 
               return (
                 <TableRow
@@ -165,10 +176,10 @@ export function MovementsTable() {
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">
-                      {getAssetName(movement.assetId)}
+                      {getAssetName(movement.asset_id, movement.asset_name)}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {movement.assetId}
+                      {movement.asset_id}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -177,10 +188,12 @@ export function MovementsTable() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{movement.fromLocation}</div>
-                    {movement.fromDepartment && (
+                    <div className="text-sm">
+                      {movement.from_location_name ?? "—"}
+                    </div>
+                    {movement.justification && (
                       <div className="text-xs text-muted-foreground">
-                        {movement.fromDepartment}
+                        {movement.justification}
                       </div>
                     )}
                   </TableCell>
@@ -188,19 +201,21 @@ export function MovementsTable() {
                     <ArrowRight className="size-4 text-muted-foreground" />
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{movement.toLocation}</div>
-                    {movement.toDepartment && (
+                    <div className="text-sm">
+                      {movement.to_location_name ?? "—"}
+                    </div>
+                    {movement.current_approval_level && (
                       <div className="text-xs text-muted-foreground">
-                        {movement.toDepartment}
+                        {movement.current_approval_level}
                       </div>
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{movement.requestedBy}</div>
+                    <div className="text-sm">{movement.requested_by_name}</div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {new Date(movement.requestedDate).toLocaleDateString()}
+                      {new Date(movement.created_at).toLocaleDateString()}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -257,45 +272,62 @@ export function MovementsTable() {
                 <div>
                   <p className="text-sm text-muted-foreground">Asset</p>
                   <p className="font-medium">
-                    {getAssetName(selectedMovement.assetId)}
+                    {getAssetName(
+                      selectedMovement.asset_id,
+                      selectedMovement.asset_name,
+                    )}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Movement Type</p>
                   <Badge
                     variant="outline"
-                    className={typeConfig[selectedMovement.type].className}
+                    className={
+                      typeConfig[
+                        selectedMovement.type as keyof typeof typeConfig
+                      ].className
+                    }
                   >
-                    {typeConfig[selectedMovement.type].label}
+                    {
+                      typeConfig[
+                        selectedMovement.type as keyof typeof typeConfig
+                      ].label
+                    }
                   </Badge>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">From</p>
-                  <p className="font-medium">{selectedMovement.fromLocation}</p>
-                  {selectedMovement.fromDepartment && (
+                  <p className="font-medium">
+                    {selectedMovement.from_location_name ?? "—"}
+                  </p>
+                  {selectedMovement.justification && (
                     <p className="text-sm text-muted-foreground">
-                      {selectedMovement.fromDepartment}
+                      {selectedMovement.justification}
                     </p>
                   )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">To</p>
-                  <p className="font-medium">{selectedMovement.toLocation}</p>
-                  {selectedMovement.toDepartment && (
+                  <p className="font-medium">
+                    {selectedMovement.to_location_name ?? "—"}
+                  </p>
+                  {selectedMovement.current_approval_level && (
                     <p className="text-sm text-muted-foreground">
-                      {selectedMovement.toDepartment}
+                      {selectedMovement.current_approval_level}
                     </p>
                   )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Requested By</p>
-                  <p className="font-medium">{selectedMovement.requestedBy}</p>
+                  <p className="font-medium">
+                    {selectedMovement.requested_by_name}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Request Date</p>
                   <p className="font-medium">
                     {new Date(
-                      selectedMovement.requestedDate
+                      selectedMovement.created_at
                     ).toLocaleDateString()}
                   </p>
                 </div>
@@ -303,23 +335,31 @@ export function MovementsTable() {
                   <p className="text-sm text-muted-foreground">Status</p>
                   <Badge
                     variant="outline"
-                    className={statusConfig[selectedMovement.status].className}
+                    className={
+                      statusConfig[
+                        selectedMovement.status as keyof typeof statusConfig
+                      ].className
+                    }
                   >
-                    {statusConfig[selectedMovement.status].label}
+                    {
+                      statusConfig[
+                        selectedMovement.status as keyof typeof statusConfig
+                      ].label
+                    }
                   </Badge>
                 </div>
-                {selectedMovement.approvedBy && (
+                {selectedMovement.status === "approved" && (
                   <div>
                     <p className="text-sm text-muted-foreground">Approved By</p>
-                    <p className="font-medium">{selectedMovement.approvedBy}</p>
+                    <p className="font-medium">System Approval</p>
                   </div>
                 )}
               </div>
-              {selectedMovement.notes && (
+              {selectedMovement.reason && (
                 <div>
                   <p className="text-sm text-muted-foreground">Notes</p>
                   <p className="text-sm mt-1 p-3 rounded-md bg-secondary">
-                    {selectedMovement.notes}
+                    {selectedMovement.reason}
                   </p>
                 </div>
               )}

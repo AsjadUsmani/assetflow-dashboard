@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { locations, departments } from "@/lib/mock-data";
+import { getLocations, type Location } from "@/lib/services/locations";
 
 export function MovementsFilters() {
   const [search, setSearch] = useState("");
@@ -22,6 +22,23 @@ export function MovementsFilters() {
     toLocation: "",
     dateRange: "30d",
   });
+  const [locations, setLocations] = useState<Location[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const locs = await getLocations();
+        if (!isMounted) return;
+        setLocations(locs);
+      } catch {
+        // ignore; filters still usable without locations
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const activeFilters = Object.entries(filters).filter(
     ([key, value]) => value && key !== "dateRange"
