@@ -41,7 +41,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getLocationById, deleteLocation, type Location } from "@/lib/services/locations";
-import { getDepartments } from "@/lib/services/departments";
+import { getDepartments, type Department } from "@/lib/services/departments";
 
 export default function LocationDetailPage({
   params,
@@ -50,7 +50,7 @@ export default function LocationDetailPage({
 }) {
   const [id, setId] = useState<string | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
-  const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,9 +69,7 @@ export default function LocationDetailPage({
         .then(([loc, depts]) => {
           if (cancelled) return;
           setLocation(loc ?? null);
-          setDepartments(
-            depts.filter((d) => d.location_id === numId).map((d) => ({ id: d.id, name: d.name }))
-          );
+          setDepartments(depts.filter((d) => d.location_id === numId));
         })
         .catch((err) => {
           if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
@@ -199,7 +197,7 @@ export default function LocationDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Package className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">—</span>
+                  <span className="text-2xl font-bold">{location.assets_count ?? 0}</span>
                 </div>
               </CardContent>
             </Card>
@@ -300,7 +298,7 @@ export default function LocationDetailPage({
                               {dept.name}
                             </Link>
                           </TableCell>
-                          <TableCell>—</TableCell>
+                          <TableCell>{dept.assets_count ?? 0}</TableCell>
                           <TableCell>Active</TableCell>
                         </TableRow>
                       ))}

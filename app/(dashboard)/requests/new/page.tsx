@@ -149,7 +149,9 @@ function NewRequestForm() {
   };
 
   const handleBack = () => {
-    if (step === 2 && !typeFromUrl) {
+    if (step === 2 && typeFromUrl) {
+      router.push("/requests");
+    } else if (step === 2 && !typeFromUrl) {
       setStep(1);
     } else if (step > 2) {
       setStep(step - 1);

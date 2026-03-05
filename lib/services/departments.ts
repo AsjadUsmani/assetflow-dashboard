@@ -14,6 +14,7 @@ export type Department = {
   email: string | null
   description: string | null
   created_at: string
+  assets_count?: number
 }
 
 export type CreateDepartmentBody = {

@@ -62,6 +62,25 @@ const typeConfig = {
   return: { label: "Asset Return", color: "bg-green-500/20 text-green-400" },
 };
 
+const defaultStatusConfig = {
+  label: "Unknown",
+  icon: AlertCircle,
+  color: "bg-muted text-muted-foreground",
+};
+
+const defaultTypeConfig = {
+  label: "Unknown",
+  color: "bg-muted text-muted-foreground",
+};
+
+function isStatusKey(value: string): value is keyof typeof statusConfig {
+  return value in statusConfig;
+}
+
+function isTypeKey(value: string): value is keyof typeof typeConfig {
+  return value in typeConfig;
+}
+
 export default function RequestDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -151,8 +170,12 @@ export default function RequestDetailPage() {
     );
   }
 
-  const status = statusConfig[request.status as keyof typeof statusConfig];
-  const type = typeConfig[request.type as keyof typeof typeConfig];
+  const status = isStatusKey(request.status)
+    ? statusConfig[request.status]
+    : defaultStatusConfig;
+  const type = isTypeKey(request.type)
+    ? typeConfig[request.type]
+    : defaultTypeConfig;
   const StatusIcon = status.icon;
 
   const approvalLevelLabel =

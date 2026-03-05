@@ -76,6 +76,34 @@ const priorityConfig = {
   urgent: { label: "Urgent", color: "text-red-400" },
 };
 
+const defaultStatusConfig = {
+  label: "Unknown",
+  icon: AlertCircle,
+  color: "bg-muted text-muted-foreground",
+};
+
+const defaultTypeConfig = {
+  label: "Unknown",
+  color: "bg-muted text-muted-foreground",
+};
+
+const defaultPriorityConfig = {
+  label: "Unknown",
+  color: "text-muted-foreground",
+};
+
+function isStatusKey(value: string): value is keyof typeof statusConfig {
+  return value in statusConfig;
+}
+
+function isTypeKey(value: string): value is keyof typeof typeConfig {
+  return value in typeConfig;
+}
+
+function isPriorityKey(value: string): value is keyof typeof priorityConfig {
+  return value in priorityConfig;
+}
+
 export default function RequestsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -297,9 +325,15 @@ export default function RequestsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredRequests.map((request) => {
-                    const status = statusConfig[request.status as keyof typeof statusConfig];
-                    const type = typeConfig[request.type];
-                    const priority = priorityConfig[request.priority as keyof typeof priorityConfig];
+                    const status = isStatusKey(request.status)
+                      ? statusConfig[request.status]
+                      : defaultStatusConfig;
+                    const type = isTypeKey(request.type)
+                      ? typeConfig[request.type]
+                      : defaultTypeConfig;
+                    const priority = isPriorityKey(request.priority)
+                      ? priorityConfig[request.priority]
+                      : defaultPriorityConfig;
                     const StatusIcon = status.icon;
 
                     return (

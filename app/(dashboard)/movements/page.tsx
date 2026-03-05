@@ -1,9 +1,23 @@
+"use client";
+
+import { useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { MovementsTable } from "@/components/movements/movements-table";
-import { MovementsFilters } from "@/components/movements/movements-filters";
+import {
+  MovementsFilters,
+  type MovementsFiltersState,
+} from "@/components/movements/movements-filters";
 import { RequestMovementDialog } from "@/components/movements/request-movement-dialog";
 
 export default function MovementsPage() {
+  const [filters, setFilters] = useState<MovementsFiltersState>({
+    search: "",
+    status: "",
+    fromLocation: "",
+    toLocation: "",
+    dateRange: "30d",
+  });
+
   return (
     <>
       <AppHeader
@@ -26,8 +40,8 @@ export default function MovementsPage() {
           <RequestMovementDialog />
         </div>
 
-        <MovementsFilters />
-        <MovementsTable />
+        <MovementsFilters filters={filters} onFiltersChange={setFilters} />
+        <MovementsTable filters={filters} />
       </div>
     </>
   );

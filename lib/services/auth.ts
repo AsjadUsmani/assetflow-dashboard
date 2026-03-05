@@ -37,6 +37,7 @@ export async function login(input: LoginInput): Promise<LoginResult> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
+    credentials: "include",
   })
 
   const json = (await res.json()) as ApiResponse<LoginResult>
@@ -60,11 +61,13 @@ export async function login(input: LoginInput): Promise<LoginResult> {
 }
 
 export async function logout(): Promise<void> {
-  await fetch("/api/auth/logout", { method: "POST" })
-
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem("auth_token")
-    window.localStorage.removeItem("auth_user")
+  try {
+    await fetch("/api/auth/logout", { method: "POST" })
+  } finally {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("auth_token")
+      window.localStorage.removeItem("auth_user")
+    }
   }
 }
 
@@ -96,4 +99,3 @@ export function getAuthUser(): MeResult | null {
     return null
   }
 }
-

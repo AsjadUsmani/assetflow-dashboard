@@ -15,6 +15,7 @@ export type Location = {
   notes: string | null
   created_at: string
   departments_count?: number
+  assets_count?: number
 }
 
 export type CreateLocationBody = {

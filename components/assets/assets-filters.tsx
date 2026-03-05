@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Search, X, Download, Upload } from "lucide-react";
+import type { Dispatch, SetStateAction } from "react";
+import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,12 +12,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { AssetsFiltersState } from "./assets-view";
 import type { AssetType } from "@/lib/services/asset-types";
 import type { Location } from "@/lib/services/locations";
@@ -31,27 +25,27 @@ export function AssetsFilters({
   departments,
 }: {
   filters: AssetsFiltersState;
-  onFiltersChange: (f: AssetsFiltersState) => void;
+  onFiltersChange: Dispatch<SetStateAction<AssetsFiltersState>>;
   assetTypes: AssetType[];
   locations: Location[];
   departments: Department[];
 }) {
-  const [search, setSearch] = useState("");
-
-  const activeFilters = Object.entries(filters).filter(([, value]) => value);
+  const activeFilters = Object.entries(filters).filter(
+    ([key, value]) => key !== "search" && Boolean(value),
+  );
 
   const clearFilter = (key: keyof AssetsFiltersState) => {
-    onFiltersChange({ ...filters, [key]: "" });
+    onFiltersChange((prev) => ({ ...prev, [key]: "" }));
   };
 
   const clearAllFilters = () => {
     onFiltersChange({
+      search: "",
       status: "",
       location: "",
       department: "",
       assetType: "",
     });
-    setSearch("");
   };
 
   return (
@@ -61,15 +55,19 @@ export function AssetsFilters({
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search assets by name, serial number..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={filters.search}
+            onChange={(e) =>
+              onFiltersChange((prev) => ({ ...prev, search: e.target.value }))
+            }
             className="pl-9 bg-secondary border-0"
           />
         </div>
 
         <Select
           value={filters.status}
-          onValueChange={(value) => onFiltersChange({ ...filters, status: value })}
+          onValueChange={(value) =>
+            onFiltersChange((prev) => ({ ...prev, status: value }))
+          }
         >
           <SelectTrigger className="w-36 bg-secondary border-0">
             <SelectValue placeholder="Status" />
@@ -85,7 +83,9 @@ export function AssetsFilters({
 
         <Select
           value={filters.location}
-          onValueChange={(value) => onFiltersChange({ ...filters, location: value })}
+          onValueChange={(value) =>
+            onFiltersChange((prev) => ({ ...prev, location: value }))
+          }
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
             <SelectValue placeholder="Location" />
@@ -101,7 +101,9 @@ export function AssetsFilters({
 
         <Select
           value={filters.department}
-          onValueChange={(value) => onFiltersChange({ ...filters, department: value })}
+          onValueChange={(value) =>
+            onFiltersChange((prev) => ({ ...prev, department: value }))
+          }
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
             <SelectValue placeholder="Department" />
@@ -117,7 +119,9 @@ export function AssetsFilters({
 
         <Select
           value={filters.assetType}
-          onValueChange={(value) => onFiltersChange({ ...filters, assetType: value })}
+          onValueChange={(value) =>
+            onFiltersChange((prev) => ({ ...prev, assetType: value }))
+          }
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
             <SelectValue placeholder="Asset Type" />
@@ -134,13 +138,18 @@ export function AssetsFilters({
         
       </div>
 
-      {(activeFilters.length > 0 || search) && (
+      {(activeFilters.length > 0 || filters.search) && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">Active filters:</span>
-          {search && (
+          {filters.search && (
             <Badge variant="secondary" className="gap-1 pr-1 bg-primary/20 text-primary">
-              Search: {search}
-              <Button variant="ghost" size="icon" className="size-4 p-0 hover:bg-transparent" onClick={() => setSearch("")}>
+              Search: {filters.search}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-4 p-0 hover:bg-transparent"
+                onClick={() => onFiltersChange((prev) => ({ ...prev, search: "" }))}
+              >
                 <X className="size-3" />
               </Button>
             </Badge>

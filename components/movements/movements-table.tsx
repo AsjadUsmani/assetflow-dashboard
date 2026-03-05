@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Eye,
@@ -35,6 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getRequests, type AssetRequest } from "@/lib/services/requests";
+import type { MovementsFiltersState } from "./movements-filters";
 
 const statusConfig = {
   pending: {
@@ -77,7 +78,7 @@ function isMovementType(type: string): type is keyof typeof typeConfig {
   return ["transfer", "checkout", "return", "maintenance", "disposal"].includes(type);
 }
 
-export function MovementsTable() {
+export function MovementsTable({ filters }: { filters: MovementsFiltersState }) {
   const [selectedMovements, setSelectedMovements] = useState<number[]>([]);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState<AssetRequest | null>(null);
@@ -110,9 +111,49 @@ export function MovementsTable() {
     };
   }, []);
 
+  const filteredMovements = useMemo(() => {
+    const search = filters.search.trim().toLowerCase();
+    const status = filters.status;
+    const fromLocation = filters.fromLocation.trim().toLowerCase();
+    const toLocation = filters.toLocation.trim().toLowerCase();
+    const dateRange = filters.dateRange;
+
+    let fromDate: Date | null = null;
+    if (dateRange !== "all") {
+      const days = Number(dateRange.replace("d", ""));
+      if (!Number.isNaN(days) && days > 0) {
+        fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      }
+    }
+
+    return movements.filter((movement) => {
+      const assetName = getAssetName(movement.asset_id, movement.asset_name).toLowerCase();
+      const reason = movement.reason.toLowerCase();
+      const requestNo = movement.request_number.toLowerCase();
+      const requestedBy = movement.requested_by_name.toLowerCase();
+
+      const matchesSearch =
+        !search ||
+        assetName.includes(search) ||
+        reason.includes(search) ||
+        requestNo.includes(search) ||
+        requestedBy.includes(search);
+
+      const matchesStatus = !status || movement.status === status;
+      const matchesFrom =
+        !fromLocation || (movement.from_location_name ?? "").toLowerCase() === fromLocation;
+      const matchesTo =
+        !toLocation || (movement.to_location_name ?? "").toLowerCase() === toLocation;
+      const matchesDate =
+        !fromDate || new Date(movement.created_at).getTime() >= fromDate.getTime();
+
+      return matchesSearch && matchesStatus && matchesFrom && matchesTo && matchesDate;
+    });
+  }, [movements, filters]);
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedMovements(movements.map((m) => m.id));
+      setSelectedMovements(filteredMovements.map((m) => m.id));
     } else {
       setSelectedMovements([]);
     }
@@ -139,7 +180,10 @@ export function MovementsTable() {
             <TableRow className="border-border hover:bg-transparent">
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedMovements.length === movements.length && movements.length > 0}
+                  checked={
+                    selectedMovements.length === filteredMovements.length &&
+                    filteredMovements.length > 0
+                  }
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
@@ -155,7 +199,14 @@ export function MovementsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {movements.map((movement) => {
+            {filteredMovements.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                  No movements found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredMovements.map((movement) => {
               const status =
                 statusConfig[movement.status as keyof typeof statusConfig];
               const StatusIcon = status.icon;
@@ -253,7 +304,7 @@ export function MovementsTable() {
                   </TableCell>
                 </TableRow>
               );
-            })}
+            }))}
           </TableBody>
         </Table>
       </div>

@@ -26,6 +26,7 @@ import { CreateAssetDialog } from "./create-asset-dialog";
 import { ImportCsvDialog } from "@/components/import-csv-dialog";
 
 export type AssetsFiltersState = {
+  search: string;
   status: string;
   location: string;
   department: string;
@@ -33,6 +34,7 @@ export type AssetsFiltersState = {
 };
 
 const emptyFilters: AssetsFiltersState = {
+  search: "",
   status: "",
   location: "",
   department: "",
@@ -142,6 +144,21 @@ export function AssetsView() {
     loadAssets();
   }, [loadAssets]);
 
+  const filteredAssets = React.useMemo(() => {
+    const term = filters.search.trim().toLowerCase();
+    if (!term) return assets;
+    return assets.filter((asset) => {
+      return (
+        asset.name.toLowerCase().includes(term) ||
+        (asset.serial_number ?? "").toLowerCase().includes(term) ||
+        (asset.asset_type_name ?? "").toLowerCase().includes(term) ||
+        (asset.location_name ?? "").toLowerCase().includes(term) ||
+        (asset.department_name ?? "").toLowerCase().includes(term) ||
+        (asset.assigned_to_name ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [assets, filters.search]);
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -192,7 +209,7 @@ export function AssetsView() {
         departments={departments}
       />
       <AssetsTable
-        assets={assets}
+        assets={filteredAssets}
         loading={loading}
         error={error}
         onRefresh={loadAssets}

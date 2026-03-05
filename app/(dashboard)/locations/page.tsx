@@ -200,7 +200,9 @@ export default function LocationsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">—</Badge>
+                          <Badge variant="outline">
+                            {location.assets_count ?? 0} assets
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>

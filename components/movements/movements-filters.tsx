@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,14 +14,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getLocations, type Location } from "@/lib/services/locations";
 
-export function MovementsFilters() {
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({
-    status: "",
-    fromLocation: "",
-    toLocation: "",
-    dateRange: "30d",
-  });
+export type MovementsFiltersState = {
+  search: string;
+  status: string;
+  fromLocation: string;
+  toLocation: string;
+  dateRange: string;
+};
+
+export function MovementsFilters({
+  filters,
+  onFiltersChange,
+}: {
+  filters: MovementsFiltersState;
+  onFiltersChange: (next: MovementsFiltersState) => void;
+}) {
   const [locations, setLocations] = useState<Location[]>([]);
 
   useEffect(() => {
@@ -40,22 +47,29 @@ export function MovementsFilters() {
     };
   }, []);
 
-  const activeFilters = Object.entries(filters).filter(
-    ([key, value]) => value && key !== "dateRange"
-  );
+  const activeFilters = Object.entries(filters).filter(([key, value]) => {
+    return Boolean(value) && key !== "dateRange" && key !== "search";
+  });
 
-  const clearFilter = (key: string) => {
-    setFilters((prev) => ({ ...prev, [key]: "" }));
+  const setFilter = (key: keyof MovementsFiltersState, value: string) => {
+    onFiltersChange({
+      ...filters,
+      [key]: key === "dateRange" && !value ? "30d" : value,
+    });
+  };
+
+  const clearFilter = (key: keyof MovementsFiltersState) => {
+    setFilter(key, "");
   };
 
   const clearAllFilters = () => {
-    setFilters({
+    onFiltersChange({
+      search: "",
       status: "",
       fromLocation: "",
       toLocation: "",
       dateRange: "30d",
     });
-    setSearch("");
   };
 
   return (
@@ -65,17 +79,15 @@ export function MovementsFilters() {
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by asset name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={filters.search}
+            onChange={(e) => setFilter("search", e.target.value)}
             className="pl-9 bg-secondary border-0"
           />
         </div>
 
         <Select
           value={filters.status}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, status: value }))
-          }
+          onValueChange={(value) => setFilter("status", value)}
         >
           <SelectTrigger className="w-36 bg-secondary border-0">
             <SelectValue placeholder="Status" />
@@ -89,16 +101,14 @@ export function MovementsFilters() {
 
         <Select
           value={filters.fromLocation}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, fromLocation: value }))
-          }
+          onValueChange={(value) => setFilter("fromLocation", value)}
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
             <SelectValue placeholder="From Location" />
           </SelectTrigger>
           <SelectContent>
             {locations.map((loc) => (
-              <SelectItem key={loc.id} value={loc.id}>
+              <SelectItem key={loc.id} value={loc.name}>
                 {loc.name}
               </SelectItem>
             ))}
@@ -107,16 +117,14 @@ export function MovementsFilters() {
 
         <Select
           value={filters.toLocation}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, toLocation: value }))
-          }
+          onValueChange={(value) => setFilter("toLocation", value)}
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
             <SelectValue placeholder="To Location" />
           </SelectTrigger>
           <SelectContent>
             {locations.map((loc) => (
-              <SelectItem key={loc.id} value={loc.id}>
+              <SelectItem key={loc.id} value={loc.name}>
                 {loc.name}
               </SelectItem>
             ))}
@@ -125,9 +133,7 @@ export function MovementsFilters() {
 
         <Select
           value={filters.dateRange}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, dateRange: value }))
-          }
+          onValueChange={(value) => setFilter("dateRange", value)}
         >
           <SelectTrigger className="w-36 bg-secondary border-0">
             <SelectValue />
@@ -141,21 +147,21 @@ export function MovementsFilters() {
         </Select>
       </div>
 
-      {(activeFilters.length > 0 || search) && (
+      {(activeFilters.length > 0 || filters.search) && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">Active filters:</span>
 
-          {search && (
+          {filters.search && (
             <Badge
               variant="secondary"
               className="gap-1 pr-1 bg-primary/20 text-primary"
             >
-              Search: {search}
+              Search: {filters.search}
               <Button
                 variant="ghost"
                 size="icon"
                 className="size-4 p-0 hover:bg-transparent"
-                onClick={() => setSearch("")}
+                onClick={() => setFilter("search", "")}
               >
                 <X className="size-3" />
               </Button>
@@ -164,9 +170,6 @@ export function MovementsFilters() {
 
           {activeFilters.map(([key, value]) => {
             let label = value;
-            if (key === "fromLocation" || key === "toLocation") {
-              label = locations.find((l) => l.id === value)?.name || value;
-            }
 
             return (
               <Badge
@@ -179,7 +182,7 @@ export function MovementsFilters() {
                   variant="ghost"
                   size="icon"
                   className="size-4 p-0 hover:bg-transparent"
-                  onClick={() => clearFilter(key)}
+                  onClick={() => clearFilter(key as keyof MovementsFiltersState)}
                 >
                   <X className="size-3" />
                 </Button>

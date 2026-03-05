@@ -118,14 +118,28 @@ class ApiService {
     return headers
   }
 
+  /** Guard: prevents multiple concurrent logout redirects */
+  private isLoggingOut = false
+
   /**
-   * Handle logout on 401 Unauthorized
+   * Handle logout on 401 Unauthorized.
+   * MUST await the cookie-clearing API call before redirecting, otherwise
+   * the middleware still sees the (now-stale) auth_token cookie and sends
+   * the browser straight back to /dashboard → infinite redirect loop.
    */
-  private handleLogout(): void {
+  private async handleLogout(): Promise<void> {
     if (typeof window === "undefined") return
 
-    // Clear the httpOnly auth cookie via the logout API route
-    fetch("/api/auth/logout", { method: "POST" }).catch(() => {})
+    // Prevent multiple 401s from triggering concurrent redirects
+    if (this.isLoggingOut) return
+    this.isLoggingOut = true
+
+    // Clear the httpOnly auth cookie via the logout API route – AWAIT it
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } catch {
+      // network error – cookie may not be cleared, but we still redirect
+    }
 
     // Remove token from localStorage
     this.removeToken()
@@ -149,7 +163,7 @@ class ApiService {
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     // Handle 401 Unauthorized - logout user
     if (response.status === 401) {
-      this.handleLogout()
+      await this.handleLogout()
       throw new Error("Session expired. Please login again.")
     }
 
