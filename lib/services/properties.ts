@@ -17,6 +17,7 @@ export type CreatePropertyBody = {
   code: string
   description?: string
   data_type: string
+  usedIn?: string[]
   config?: Record<string, unknown>
 }
 

@@ -80,3 +80,7 @@ export async function decideRequest(id: number, body: DecideRequestBody): Promis
   return json.data
 }
 
+export async function deleteRequest(id: number): Promise<void> {
+  await apiService.delete(`${BASE}/${id}`, true)
+}
+
