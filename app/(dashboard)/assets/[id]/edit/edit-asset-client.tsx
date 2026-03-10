@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
@@ -61,6 +61,12 @@ export function EditAssetClient() {
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [propertyValues, setPropertyValues] = useState<Record<string, string | number | boolean>>({});
+  const [currentTab, setCurrentTab] = useState(defaultTab);
+
+  const requiredProperties = useMemo(
+    () => assetType?.properties?.filter((p) => p.is_required) ?? [],
+    [assetType],
+  );
 
   useEffect(() => {
     if (Number.isNaN(id)) {
@@ -74,12 +80,14 @@ export function EditAssetClient() {
       getDepartments(),
       getWorkspaceUsers(),
     ])
-      .then(([a, locs, depts, usrs]) => {
+      .then(async ([a, locs, depts, usrs]) => {
         if (!a) {
           setError("Asset not found");
           return;
         }
+        const at = await getAssetTypeById(a.asset_type_id);
         setAsset(a);
+        setAssetType(at);
         setLocations(locs);
         setDepartments(depts);
         setUsers(usrs);
@@ -94,15 +102,31 @@ export function EditAssetClient() {
         setExpiryDate(toDateInputValue(a.expiry_date));
         const pv: Record<string, string | number | boolean> = {};
         if (a.property_values && typeof a.property_values === "object") {
-          Object.entries(a.property_values).forEach(([k, v]) => {
+          Object.entries(a.property_values as Record<string, unknown>).forEach(([k, v]) => {
             if (v !== null && v !== undefined) pv[k] = v as string | number | boolean;
           });
         }
-        setPropertyValues(pv);
-        return getAssetTypeById(a.asset_type_id);
-      })
-      .then((at) => {
-        if (at) setAssetType(at);
+
+        const normalizedByName: Record<string, string | number | boolean> = {};
+        if (at?.properties?.length) {
+          at.properties.forEach((prop) => {
+            const byName = pv[prop.name];
+            const byCode = prop.code ? pv[prop.code] : undefined;
+            const byId = pv[String(prop.id)];
+            const resolved = byName ?? byCode ?? byId;
+            if (resolved !== undefined && resolved !== null) {
+              normalizedByName[prop.name] = resolved;
+            }
+            if (
+              (prop.data_type ?? "text") === "boolean" &&
+              prop.is_required &&
+              normalizedByName[prop.name] === undefined
+            ) {
+              normalizedByName[prop.name] = true;
+            }
+          });
+        }
+        setPropertyValues(Object.keys(normalizedByName).length > 0 ? normalizedByName : pv);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -112,9 +136,47 @@ export function EditAssetClient() {
     setPropertyValues((prev) => ({ ...prev, [propName]: value }));
   };
 
+  const hasPropertyValue = (prop: AssetType["properties"][number]): boolean => {
+    const value = propertyValues[prop.name];
+    if ((prop.data_type ?? "text") === "boolean") {
+      return typeof value === "boolean";
+    }
+    return value !== undefined && value !== null && value !== "";
+  };
+
+  const validateRequiredProperties = (): boolean => {
+    for (const prop of requiredProperties) {
+      if (!hasPropertyValue(prop)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const canContinueFromProperties = validateRequiredProperties();
+
+  const handleContinueFromBasic = () => {
+    if (!name.trim()) {
+      setError("Asset name is required");
+      return;
+    }
+    setError(null);
+    setCurrentTab("properties");
+  };
+
+  const handleContinueFromProperties = () => {
+    if (!canContinueFromProperties) return;
+    setError(null);
+    setCurrentTab("assignment");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!asset) return;
+    if (!validateRequiredProperties()) {
+      setCurrentTab("properties");
+      return;
+    }
     setError(null);
     setSaving(true);
     try {
@@ -181,7 +243,7 @@ export function EditAssetClient() {
       <div className="flex flex-1 flex-col gap-6 p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Tabs defaultValue={defaultTab} className="w-full">
+          <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="properties">Properties</TabsTrigger>
@@ -238,7 +300,9 @@ export function EditAssetClient() {
                     const options = Array.isArray(prop.config?.options) ? (prop.config.options as string[]) : [];
                     return (
                       <div key={prop.id} className="space-y-2">
-                        <Label htmlFor={`edit-prop-${prop.id}`}>
+                        <Label
+                          htmlFor={`edit-prop-${prop.id}`}
+                        >
                           {prop.name}
                           {prop.is_required && <span className="text-destructive"> *</span>}
                         </Label>
@@ -345,9 +409,21 @@ export function EditAssetClient() {
             </TabsContent>
           </Tabs>
           <div className="flex gap-2">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save changes"}
-            </Button>
+            {currentTab === "basic" && (
+              <Button type="button" onClick={handleContinueFromBasic}>
+                Continue
+              </Button>
+            )}
+            {currentTab === "properties" && (
+              <Button type="button" onClick={handleContinueFromProperties} disabled={!canContinueFromProperties}>
+                Continue
+              </Button>
+            )}
+            {currentTab === "assignment" && (
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save changes"}
+              </Button>
+            )}
             <Button type="button" variant="outline" asChild>
               <Link href={`/assets/${asset.id}`}>Cancel</Link>
             </Button>

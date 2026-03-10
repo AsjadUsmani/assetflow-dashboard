@@ -197,7 +197,7 @@ export function AssetsView() {
         onOpenChange={setImportDialogOpen}
         endpoint="/workspace/assets/import-csv"
         title="Import assets from CSV"
-        description="Upload a CSV with columns: asset_type_id (or asset_type_name), name, serial_number, status, location_id, department_id, purchase_date, warranty_end_date, expiry_date. Download the sample for the exact format."
+        description="Upload a CSV with columns: asset_type_id or asset_type_name (must match an existing asset type), name, serial_number, status, location_id, department_id, purchase_date, warranty_end_date, expiry_date. Valid status values: available, assigned, in_maintenance, retired, lost."
         sampleFilename="assets-sample.csv"
         onSuccess={loadAssets}
       />

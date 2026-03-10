@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -18,8 +18,6 @@ import {
   Settings,
   Bell,
   ChevronDown,
-  GitPullRequest,
-  FileCheck,
   GitBranch,
   ClipboardList,
 } from "lucide-react";
@@ -152,6 +150,7 @@ function NavItemComponent({ item }: { item: NavItem }) {
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -209,15 +208,22 @@ export function AppSidebar() {
                         : LayoutDashboard
 
                     return item.children.length > 0 ? (
-                      <Collapsible key={item.id} asChild defaultOpen>
+                      <Collapsible
+                        key={item.id}
+                        asChild
+                        defaultOpen={pathname.startsWith(item.path)}
+                      >
                         <SidebarMenuItem>
                           <CollapsibleTrigger asChild>
                             <SidebarMenuButton
                               isActive={pathname.startsWith(item.path)}
                               tooltip={item.label ?? item.path}
+                              onClick={() => {
+                                router.push(item.path);
+                              }}
                             >
                               <Icon className="size-4" />
-                              <Link href={item.path}><span>{item.label ?? item.path}</span></Link>
+                              <span>{item.label ?? item.path}</span>
                               <ChevronDown className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
                             </SidebarMenuButton>
                           </CollapsibleTrigger>

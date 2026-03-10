@@ -3,6 +3,7 @@ import { apiService } from "./api-service"
 export type AssetTypePropertySummary = {
   id: number
   name: string
+  code?: string
   is_required?: boolean
   data_type?: string
   config?: Record<string, unknown> | null

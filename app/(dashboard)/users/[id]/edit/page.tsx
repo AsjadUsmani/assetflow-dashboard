@@ -165,7 +165,7 @@ export default function EditUserPage() {
 
   return (
     <>
-      <DashboardHeader
+      <AppHeader
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Users", href: "/users" },
