@@ -1,35 +1,24 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, UserX, Package, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getAssets, type Asset } from "@/lib/services/assets";
+import { getRequests, type AssetRequest } from "@/lib/services/requests";
+import {
+  isInDateRange,
+  type DashboardFilterState,
+} from "@/components/dashboard/filters";
 
-const alerts = [
-  {
-    id: "1",
-    type: "gap" as const,
-    title: "Accountability Gap",
-    description: "8 assets have no assigned owner",
-    icon: UserX,
-    actionLabel: "Review assets",
-  },
-  {
-    id: "2",
-    type: "untracked" as const,
-    title: "Untracked Assets",
-    description: "3 recently added assets need categorization",
-    icon: Package,
-    actionLabel: "Categorize now",
-  },
-  {
-    id: "3",
-    type: "maintenance" as const,
-    title: "Maintenance Due",
-    description: "12 assets require scheduled maintenance",
-    icon: AlertCircle,
-    actionLabel: "View schedule",
-  },
-];
+type AlertItem = {
+  id: string;
+  type: "gap" | "untracked" | "maintenance";
+  title: string;
+  description: string;
+  icon: typeof UserX;
+  actionLabel: string;
+};
 
 const alertTypeConfig = {
   gap: {
@@ -49,7 +38,78 @@ const alertTypeConfig = {
   },
 };
 
-export function AlertsPanel() {
+export function AlertsPanel({ filters }: { filters: DashboardFilterState }) {
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [requests, setRequests] = useState<AssetRequest[]>([]);
+
+  useEffect(() => {
+    const location = filters.location ? Number(filters.location) : undefined;
+    const department = filters.department ? Number(filters.department) : undefined;
+    const assetType = filters.assetType ? Number(filters.assetType) : undefined;
+
+    let isMounted = true;
+    (async () => {
+      try {
+        const [assetsData, requestsData] = await Promise.all([
+          getAssets({ location, department, assetType }),
+          getRequests(),
+        ]);
+        if (!isMounted) return;
+        const filteredAssets = assetsData.filter((asset) =>
+          isInDateRange(asset.created_at, filters.dateRange),
+        );
+        const assetIds = new Set(filteredAssets.map((asset) => asset.id));
+        const filteredRequests = requestsData.filter((request) =>
+          isInDateRange(request.created_at, filters.dateRange) &&
+          (request.asset_id == null || assetIds.has(request.asset_id)),
+        );
+
+        setAssets(filteredAssets);
+        setRequests(filteredRequests);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [filters]);
+
+  const alerts: AlertItem[] = useMemo(() => {
+    const accountabilityGaps = assets.filter((asset) => asset.assigned_to_user_id == null).length;
+    const untrackedAssets = assets.filter((asset) => !asset.asset_type_name).length;
+    const maintenanceDue = requests.filter(
+      (request) => request.type === "maintenance" && ["pending", "in_review"].includes(request.status),
+    ).length;
+
+    return [
+      {
+        id: "gap",
+        type: "gap",
+        title: "Accountability Gap",
+        description: `${accountabilityGaps} assets have no assigned owner`,
+        icon: UserX,
+        actionLabel: "Review assets",
+      },
+      {
+        id: "untracked",
+        type: "untracked",
+        title: "Untracked Assets",
+        description: `${untrackedAssets} assets need categorization`,
+        icon: Package,
+        actionLabel: "Categorize now",
+      },
+      {
+        id: "maintenance",
+        type: "maintenance",
+        title: "Maintenance Due",
+        description: `${maintenanceDue} maintenance requests are pending`,
+        icon: AlertCircle,
+        actionLabel: "View schedule",
+      },
+    ];
+  }, [assets, requests]);
+
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2">

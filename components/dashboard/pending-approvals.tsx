@@ -19,6 +19,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getRequests, type AssetRequest } from "@/lib/services/requests";
+import { getAssets } from "@/lib/services/assets";
+import {
+  isInDateRange,
+  type DashboardFilterState,
+} from "@/components/dashboard/filters";
 
 const getRequestIcon = (type: string) => {
   switch (type) {
@@ -65,16 +70,31 @@ const getPriorityColor = (priority: string) => {
   }
 };
 
-export function PendingApprovals() {
+export function PendingApprovals({ filters }: { filters: DashboardFilterState }) {
   const [requests, setRequests] = useState<AssetRequest[]>([]);
 
   useEffect(() => {
+    const location = filters.location ? Number(filters.location) : undefined;
+    const department = filters.department ? Number(filters.department) : undefined;
+    const assetType = filters.assetType ? Number(filters.assetType) : undefined;
+
     let isMounted = true;
     (async () => {
       try {
-        const data = await getRequests();
+        const [data, filteredAssets] = await Promise.all([
+          getRequests(),
+          getAssets({ location, department, assetType }),
+        ]);
         if (!isMounted) return;
-        setRequests(data);
+        const filteredAssetIds = new Set(filteredAssets.map((asset) => asset.id));
+        const hasAssetFilter = Boolean(location || department || assetType);
+        setRequests(
+          data.filter((request) => {
+            if (!isInDateRange(request.created_at, filters.dateRange)) return false;
+            if (request.asset_id == null) return !hasAssetFilter;
+            return filteredAssetIds.has(request.asset_id);
+          }),
+        );
       } catch {
         // swallow; global error handler can surface toast separately
       }
@@ -82,7 +102,7 @@ export function PendingApprovals() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [filters]);
 
   const pendingRequests = requests.filter((req) =>
     ["pending", "in_review"].includes(req.status)

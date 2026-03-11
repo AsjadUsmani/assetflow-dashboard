@@ -1,45 +1,25 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Calendar, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { getAssets, type Asset } from "@/lib/services/assets";
+import {
+  isInDateRange,
+  type DashboardFilterState,
+} from "@/components/dashboard/filters";
 
-const expiringAssets = [
-  {
-    id: "1",
-    name: "Adobe Creative Cloud",
-    type: "Software License",
-    expiryDate: "Feb 1, 2025",
-    daysLeft: 2,
-    urgency: "critical" as const,
-  },
-  {
-    id: "2",
-    name: "Microsoft 365 Enterprise",
-    type: "Software License",
-    expiryDate: "Mar 15, 2025",
-    daysLeft: 44,
-    urgency: "warning" as const,
-  },
-  {
-    id: "3",
-    name: "SSL Certificate",
-    type: "Digital Certificate",
-    expiryDate: "Apr 20, 2025",
-    daysLeft: 80,
-    urgency: "normal" as const,
-  },
-  {
-    id: "4",
-    name: "Antivirus Subscription",
-    type: "Software License",
-    expiryDate: "Feb 28, 2025",
-    daysLeft: 29,
-    urgency: "warning" as const,
-  },
-];
+type ExpiringAsset = {
+  id: string;
+  name: string;
+  type: string;
+  expiryDate: string;
+  daysLeft: number;
+  urgency: "critical" | "warning" | "normal";
+};
 
 const urgencyConfig = {
   critical: {
@@ -62,7 +42,53 @@ const urgencyConfig = {
   },
 };
 
-export function ExpiringAssets() {
+export function ExpiringAssets({ filters }: { filters: DashboardFilterState }) {
+  const [assets, setAssets] = useState<Asset[]>([]);
+
+  useEffect(() => {
+    const location = filters.location ? Number(filters.location) : undefined;
+    const department = filters.department ? Number(filters.department) : undefined;
+    const assetType = filters.assetType ? Number(filters.assetType) : undefined;
+
+    let isMounted = true;
+    (async () => {
+      try {
+        const data = await getAssets({ location, department, assetType });
+        if (!isMounted) return;
+        setAssets(data.filter((asset) => isInDateRange(asset.created_at, filters.dateRange)));
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [filters]);
+
+  const expiringAssets: ExpiringAsset[] = useMemo(() => {
+    const now = Date.now();
+    return assets
+      .filter((asset) => asset.expiry_date)
+      .map((asset) => {
+        const daysLeft = Math.ceil(
+          (new Date(asset.expiry_date as string).getTime() - now) / (1000 * 60 * 60 * 24),
+        );
+        const urgency: ExpiringAsset["urgency"] =
+          daysLeft <= 7 ? "critical" : daysLeft <= 30 ? "warning" : "normal";
+        return {
+          id: String(asset.id),
+          name: asset.name,
+          type: asset.asset_type_name || "Asset",
+          expiryDate: new Date(asset.expiry_date as string).toLocaleDateString(),
+          daysLeft,
+          urgency,
+        };
+      })
+      .filter((asset) => asset.daysLeft >= 0)
+      .sort((a, b) => a.daysLeft - b.daysLeft)
+      .slice(0, 4);
+  }, [assets]);
+
   return (
     <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between pb-2">

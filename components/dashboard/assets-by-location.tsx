@@ -13,6 +13,10 @@ import {
 } from "recharts";
 import { getAssets, type Asset } from "@/lib/services/assets";
 import { getLocations, type Location } from "@/lib/services/locations";
+import {
+  isInDateRange,
+  type DashboardFilterState,
+} from "@/components/dashboard/filters";
 
 const CustomTooltip = ({
   active,
@@ -46,20 +50,26 @@ type ChartRow = {
   assigned: number;
 };
 
-export function AssetsByLocation() {
+export function AssetsByLocation({ filters }: { filters: DashboardFilterState }) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
 
   useEffect(() => {
+    const location = filters.location ? Number(filters.location) : undefined;
+    const department = filters.department ? Number(filters.department) : undefined;
+    const assetType = filters.assetType ? Number(filters.assetType) : undefined;
+
     let isMounted = true;
     (async () => {
       try {
         const [assetsData, locationsData] = await Promise.all([
-          getAssets(),
+          getAssets({ location, department, assetType }),
           getLocations(),
         ]);
         if (!isMounted) return;
-        setAssets(assetsData);
+        setAssets(
+          assetsData.filter((asset) => isInDateRange(asset.created_at, filters.dateRange)),
+        );
         setLocations(locationsData);
       } catch {
         // ignore; dashboard can show empty chart on error
@@ -68,7 +78,7 @@ export function AssetsByLocation() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [filters]);
 
   const data: ChartRow[] = useMemo(() => {
     if (!locations.length) return [];
@@ -106,7 +116,7 @@ export function AssetsByLocation() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[280px]">
+        <div className="h-70">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} layout="vertical" barGap={4}>
               <CartesianGrid

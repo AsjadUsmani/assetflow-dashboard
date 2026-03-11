@@ -34,7 +34,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getRequests, type AssetRequest } from "@/lib/services/requests";
+import { getRequests, decideRequest, type AssetRequest } from "@/lib/services/requests";
+import { Textarea } from "@/components/ui/textarea";
 import type { MovementsFiltersState } from "./movements-filters";
 
 const statusConfig = {
@@ -81,7 +82,10 @@ function isMovementType(type: string): type is keyof typeof typeConfig {
 export function MovementsTable({ filters }: { filters: MovementsFiltersState }) {
   const [selectedMovements, setSelectedMovements] = useState<number[]>([]);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState<AssetRequest | null>(null);
+  const [comments, setComments] = useState("");
   const [movements, setMovements] = useState<AssetRequest[]>([]);
 
   const getAssetName = (assetId: number | null, fallbackName: string | null) => {
@@ -170,6 +174,40 @@ export function MovementsTable({ filters }: { filters: MovementsFiltersState }) 
   const handleView = (movement: AssetRequest) => {
     setSelectedMovement(movement);
     setViewDialogOpen(true);
+  };
+
+  const handleApproveClick = (movement: AssetRequest) => {
+    setSelectedMovement(movement);
+    setComments("");
+    setApproveDialogOpen(true);
+  };
+
+  const handleRejectClick = (movement: AssetRequest) => {
+    setSelectedMovement(movement);
+    setComments("");
+    setRejectDialogOpen(true);
+  };
+
+  const handleApprove = async () => {
+    if (!selectedMovement) return;
+    try {
+      const updated = await decideRequest(selectedMovement.id, { decision: "approve", comment: comments });
+      setMovements((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+    } finally {
+      setApproveDialogOpen(false);
+      setComments("");
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedMovement) return;
+    try {
+      const updated = await decideRequest(selectedMovement.id, { decision: "reject", comment: comments });
+      setMovements((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+    } finally {
+      setRejectDialogOpen(false);
+      setComments("");
+    }
   };
 
   return (
@@ -289,11 +327,11 @@ export function MovementsTable({ filters }: { filters: MovementsFiltersState }) 
                         </DropdownMenuItem>
                         {movement.status === "pending" && (
                           <>
-                            <DropdownMenuItem className="text-success">
+                            <DropdownMenuItem className="text-success" onClick={() => handleApproveClick(movement)}>
                               <CheckCircle className="mr-2 size-4" />
                               Approve
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleRejectClick(movement)}>
                               <XCircle className="mr-2 size-4" />
                               Reject
                             </DropdownMenuItem>
@@ -419,6 +457,65 @@ export function MovementsTable({ filters }: { filters: MovementsFiltersState }) 
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Request</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to approve this request? This action will move the request to the next approval stage.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Comments (Optional)</label>
+              <Textarea
+                placeholder="Add any comments for the approval..."
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>Cancel</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleApprove}>
+              Approve Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Request</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reject this request? Please provide a reason for the rejection.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">
+                Rejection Reason <span className="text-red-400">*</span>
+              </label>
+              <Textarea
+                placeholder="Please explain why this request is being rejected..."
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                className="mt-2"
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleReject} disabled={!comments.trim()}>
+              Reject Request
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -11,6 +11,10 @@ import {
   Legend,
 } from "recharts";
 import { getAssets, type Asset } from "@/lib/services/assets";
+import {
+  isInDateRange,
+  type DashboardFilterState,
+} from "@/components/dashboard/filters";
 
 type CategorySlice = {
   name: string;
@@ -51,16 +55,20 @@ const CustomTooltip = ({
   return null;
 };
 
-export function AssetsByCategory() {
+export function AssetsByCategory({ filters }: { filters: DashboardFilterState }) {
   const [assets, setAssets] = useState<Asset[]>([]);
 
   useEffect(() => {
+    const location = filters.location ? Number(filters.location) : undefined;
+    const department = filters.department ? Number(filters.department) : undefined;
+    const assetType = filters.assetType ? Number(filters.assetType) : undefined;
+
     let isMounted = true;
     (async () => {
       try {
-        const data = await getAssets();
+        const data = await getAssets({ location, department, assetType });
         if (!isMounted) return;
-        setAssets(data);
+        setAssets(data.filter((asset) => isInDateRange(asset.created_at, filters.dateRange)));
       } catch {
         // ignore; empty chart is acceptable fallback
       }
@@ -68,7 +76,7 @@ export function AssetsByCategory() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [filters]);
 
   const data: CategorySlice[] = useMemo(() => {
     if (!assets.length) return [];
@@ -99,7 +107,7 @@ export function AssetsByCategory() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[280px]">
+        <div className="h-70">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie

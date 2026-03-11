@@ -15,6 +15,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { getAssets } from "@/lib/services/assets";
 import { getRequests, type AssetRequest } from "@/lib/services/requests";
+import {
+  isInDateRange,
+  type DashboardFilterState,
+} from "@/components/dashboard/filters";
 
 type Stat = {
   title: string;
@@ -35,21 +39,36 @@ type AlertStat = {
   description: string;
 };
 
-export function DashboardStats() {
+export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
   const [assetCount, setAssetCount] = useState<number>(0);
   const [requests, setRequests] = useState<AssetRequest[]>([]);
 
   useEffect(() => {
+    const location = filters.location ? Number(filters.location) : undefined;
+    const department = filters.department ? Number(filters.department) : undefined;
+    const assetType = filters.assetType ? Number(filters.assetType) : undefined;
+
     let isMounted = true;
     (async () => {
       try {
         const [assetsData, requestsData] = await Promise.all([
-          getAssets(),
+          getAssets({ location, department, assetType }),
           getRequests(),
         ]);
         if (!isMounted) return;
-        setAssetCount(assetsData.length);
-        setRequests(requestsData);
+        const filteredAssets = assetsData.filter((asset) =>
+          isInDateRange(asset.created_at, filters.dateRange),
+        );
+        const assetIds = new Set(filteredAssets.map((asset) => asset.id));
+        const filteredRequests = requestsData.filter((request) => {
+          const matchesDate = isInDateRange(request.created_at, filters.dateRange);
+          if (!matchesDate) return false;
+          if (request.asset_id == null) return true;
+          return assetIds.has(request.asset_id);
+        });
+
+        setAssetCount(filteredAssets.length);
+        setRequests(filteredRequests);
       } catch {
         // ignore; global error handler can surface issues if needed
       }
@@ -57,7 +76,7 @@ export function DashboardStats() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [filters]);
 
   const { stats, alertStats } = useMemo(() => {
     const pending = requests.filter((r) =>
@@ -139,7 +158,7 @@ export function DashboardStats() {
         const isHighlight = stat.highlight;
 
         return (
-          <CardWrapper key={stat.title} {...cardProps}>
+          <CardWrapper href={''} key={stat.title} {...cardProps}>
             <Card
               className={`bg-card border-border transition-colors ${stat.href ? "hover:bg-accent cursor-pointer" : ""} ${isHighlight ? "border-amber-500/50 bg-amber-500/5" : ""}`}
             >

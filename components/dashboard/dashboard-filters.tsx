@@ -14,21 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { getLocations, type Location } from "@/lib/services/locations";
 import { getDepartments, type Department } from "@/lib/services/departments";
 import { getAssetTypes, type AssetType } from "@/lib/services/asset-types";
+import type { DashboardFilterState } from "./filters";
 
-interface FilterState {
-  location: string;
-  department: string;
-  assetType: string;
-  dateRange: string;
-}
+type DashboardFiltersProps = {
+  value: DashboardFilterState;
+  onChange: (value: DashboardFilterState) => void;
+};
 
-export function DashboardFilters() {
-  const [filters, setFilters] = useState<FilterState>({
-    location: "",
-    department: "",
-    assetType: "",
-    dateRange: "30d",
-  });
+export function DashboardFilters({ value, onChange }: DashboardFiltersProps) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
@@ -55,16 +48,16 @@ export function DashboardFilters() {
     };
   }, []);
 
-  const activeFilters = Object.entries(filters).filter(
+  const activeFilters = Object.entries(value).filter(
     ([key, value]) => value && key !== "dateRange"
   );
 
-  const clearFilter = (key: keyof FilterState) => {
-    setFilters((prev) => ({ ...prev, [key]: "" }));
+  const clearFilter = (key: keyof DashboardFilterState) => {
+    onChange({ ...value, [key]: "" });
   };
 
   const clearAllFilters = () => {
-    setFilters({
+    onChange({
       location: "",
       department: "",
       assetType: "",
@@ -81,9 +74,9 @@ export function DashboardFilters() {
         </div>
 
         <Select
-          value={filters.location}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, location: value }))
+          value={value.location}
+          onValueChange={(selected) =>
+            onChange({ ...value, location: selected })
           }
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
@@ -91,7 +84,7 @@ export function DashboardFilters() {
           </SelectTrigger>
           <SelectContent>
             {locations.map((location) => (
-              <SelectItem key={location.id} value={location.id}>
+              <SelectItem key={location.id} value={String(location.id)}>
                 {location.name}
               </SelectItem>
             ))}
@@ -99,9 +92,9 @@ export function DashboardFilters() {
         </Select>
 
         <Select
-          value={filters.department}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, department: value }))
+          value={value.department}
+          onValueChange={(selected) =>
+            onChange({ ...value, department: selected })
           }
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
@@ -109,7 +102,7 @@ export function DashboardFilters() {
           </SelectTrigger>
           <SelectContent>
             {departments.map((dept) => (
-              <SelectItem key={dept.id} value={dept.id}>
+              <SelectItem key={dept.id} value={String(dept.id)}>
                 {dept.name}
               </SelectItem>
             ))}
@@ -117,9 +110,9 @@ export function DashboardFilters() {
         </Select>
 
         <Select
-          value={filters.assetType}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, assetType: value }))
+          value={value.assetType}
+          onValueChange={(selected) =>
+            onChange({ ...value, assetType: selected })
           }
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
@@ -127,7 +120,7 @@ export function DashboardFilters() {
           </SelectTrigger>
           <SelectContent>
             {assetTypes.map((type) => (
-              <SelectItem key={type.id} value={type.id}>
+              <SelectItem key={type.id} value={String(type.id)}>
                 {type.name}
               </SelectItem>
             ))}
@@ -135,9 +128,9 @@ export function DashboardFilters() {
         </Select>
 
         <Select
-          value={filters.dateRange}
-          onValueChange={(value) =>
-            setFilters((prev) => ({ ...prev, dateRange: value }))
+          value={value.dateRange}
+          onValueChange={(selected) =>
+            onChange({ ...value, dateRange: selected })
           }
         >
           <SelectTrigger className="w-40 bg-secondary border-0">
@@ -171,11 +164,11 @@ export function DashboardFilters() {
           {activeFilters.map(([key, value]) => {
             let label = "";
             if (key === "location") {
-              label = locations.find((l) => l.id === value)?.name || value;
+              label = locations.find((l) => String(l.id) === value)?.name || value;
             } else if (key === "department") {
-              label = departments.find((d) => d.id === value)?.name || value;
+              label = departments.find((d) => String(d.id) === value)?.name || value;
             } else if (key === "assetType") {
-              label = assetTypes.find((t) => t.id === value)?.name || value;
+              label = assetTypes.find((t) => String(t.id) === value)?.name || value;
             }
 
             return (
@@ -189,7 +182,7 @@ export function DashboardFilters() {
                   variant="ghost"
                   size="icon"
                   className="size-4 p-0 hover:bg-transparent"
-                  onClick={() => clearFilter(key as keyof FilterState)}
+                  onClick={() => clearFilter(key as keyof DashboardFilterState)}
                 >
                   <X className="size-3" />
                 </Button>

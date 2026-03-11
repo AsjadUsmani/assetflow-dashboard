@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react"
+import React, { useEffect, useMemo, useState } from "react";
 
 import {
   Monitor,
@@ -14,6 +14,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { getAssets, type Asset } from "@/lib/services/assets";
+import {
+  isInDateRange,
+  type DashboardFilterState,
+} from "@/components/dashboard/filters";
 
 interface StockItem {
   category: string;
@@ -26,50 +31,63 @@ interface StockItem {
   trendValue: string;
 }
 
-const stockData: StockItem[] = [
-  {
-    category: "IT Assets",
-    icon: Monitor,
-    total: 1247,
-    available: 312,
-    assigned: 892,
-    lowStock: false,
-    trend: "up",
-    trendValue: "+12%",
-  },
-  {
-    category: "Projection",
-    icon: Projector,
-    total: 156,
-    available: 23,
-    assigned: 128,
-    lowStock: true,
-    trend: "down",
-    trendValue: "-5%",
-  },
-  {
-    category: "Consumables",
-    icon: Mouse,
-    total: 543,
-    available: 187,
-    assigned: 312,
-    lowStock: false,
-    trend: "up",
-    trendValue: "+8%",
-  },
-  {
-    category: "Spares & Parts",
-    icon: Wrench,
-    total: 324,
-    available: 156,
-    assigned: 145,
-    lowStock: false,
-    trend: "stable",
-    trendValue: "0%",
-  },
-];
+const ICONS = [Monitor, Projector, Mouse, Wrench];
 
-export function StockOverview() {
+export function StockOverview({ filters }: { filters: DashboardFilterState }) {
+  const [assets, setAssets] = useState<Asset[]>([]);
+
+  useEffect(() => {
+    const location = filters.location ? Number(filters.location) : undefined;
+    const department = filters.department ? Number(filters.department) : undefined;
+    const assetType = filters.assetType ? Number(filters.assetType) : undefined;
+
+    let isMounted = true;
+    (async () => {
+      try {
+        const data = await getAssets({ location, department, assetType });
+        if (!isMounted) return;
+        setAssets(data.filter((asset) => isInDateRange(asset.created_at, filters.dateRange)));
+      } catch {
+        // ignore; panel can render empty state
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [filters]);
+
+  const stockData: StockItem[] = useMemo(() => {
+    const buckets: Record<string, { total: number; available: number; assigned: number }> = {};
+
+    assets.forEach((asset) => {
+      const key = asset.asset_type_name || "Other";
+      if (!buckets[key]) {
+        buckets[key] = { total: 0, available: 0, assigned: 0 };
+      }
+      buckets[key].total += 1;
+      if (asset.status === "available") buckets[key].available += 1;
+      else buckets[key].assigned += 1;
+    });
+
+    return Object.entries(buckets)
+      .map(([category, value], index) => {
+        const ratio = value.total ? value.available / value.total : 0;
+        return {
+          category,
+          icon: ICONS[index % ICONS.length],
+          total: value.total,
+          available: value.available,
+          assigned: value.assigned,
+          lowStock: ratio < 0.2,
+          trend: "stable" as const,
+          trendValue: "0%",
+        };
+      })
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 4);
+  }, [assets]);
+
   const totalStock = stockData.reduce((acc, item) => acc + item.total, 0);
   const totalAvailable = stockData.reduce((acc, item) => acc + item.available, 0);
 

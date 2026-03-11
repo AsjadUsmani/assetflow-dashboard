@@ -10,13 +10,8 @@ import {
   Clock,
   AlertCircle,
   FileText,
-  Download,
   User,
-  MapPin,
-  Building,
   Calendar,
-  MessageSquare,
-  ChevronRight,
 } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
