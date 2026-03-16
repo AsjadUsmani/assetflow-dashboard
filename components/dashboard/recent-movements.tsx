@@ -146,7 +146,7 @@ export function RecentMovements({ filters }: { filters: DashboardFilterState }) 
           View all
         </Button>
       </CardHeader>
-      <CardContent className="overflow-hidden">
+      <CardContent className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
@@ -192,7 +192,7 @@ export function RecentMovements({ filters }: { filters: DashboardFilterState }) 
                     {new Date(movement.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="size-8">
                           <MoreHorizontal className="size-4" />

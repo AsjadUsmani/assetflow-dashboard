@@ -187,7 +187,7 @@ export function RolesList() {
         })}
         {/* Add New Role Card */}
         <Card className="bg-card border-border border-dashed">
-          <CardContent className="flex flex-col items-center justify-center h-full min-h-[140px] gap-2">
+          <CardContent className="flex flex-col items-center justify-center h-full min-h-35 gap-2">
             <div className="p-2 rounded-lg bg-secondary">
               <Plus className="size-5 text-muted-foreground" />
             </div>
