@@ -93,6 +93,10 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   suspended: { label: "Suspended", color: "bg-red-500/10 text-red-600 dark:text-red-400" },
 }
 
+const fallbackRoleBadge = {
+  color: "bg-slate-500/10 text-slate-700 dark:text-slate-300",
+}
+
 type UserRow = {
   id: number
   username: string
@@ -161,6 +165,14 @@ export default function UsersPage() {
   const adminCount = users.filter((u) =>
     (u.role_name ?? "").toLowerCase().includes("admin"),
   ).length
+  const roleOptions = React.useMemo(() => {
+    const uniq = new Set<string>()
+    for (const user of users) {
+      const roleName = (user.role_name ?? "").trim()
+      if (roleName) uniq.add(roleName)
+    }
+    return Array.from(uniq).sort((a, b) => a.localeCompare(b))
+  }, [users])
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -268,7 +280,7 @@ export default function UsersPage() {
           onOpenChange={setImportDialogOpen}
           endpoint="/workspace/users/import-csv"
           title="Import users from CSV"
-          description="Upload a CSV with columns: username, email, first_name, last_name, password, role_name, mobile, is_active. Download the sample for the exact format."
+          description="Upload CSV with columns: Display name, Email Address, Title, Department, City, Country, Office, Block Credentials. Download sample CSV for exact format."
           sampleFilename="users-sample.csv"
           onSuccess={loadUsers}
         />
@@ -291,11 +303,14 @@ export default function UsersPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="super_admin">Super Admin</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
-                <SelectItem value="editor">Editor</SelectItem>
-                <SelectItem value="viewer">Viewer</SelectItem>
+                {roleOptions.map((roleName) => (
+                  <SelectItem
+                    key={roleName}
+                    value={roleName.toLowerCase().replace(/\s+/g, "_")}
+                  >
+                    {roleName}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -325,10 +340,10 @@ export default function UsersPage() {
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((user) => {
-                  const roleKey = (user.role_name ?? "viewer")
+                  const roleKey = (user.role_name ?? "")
                     .toLowerCase()
-                    .replace(" ", "_")
-                  const role = roleConfig[roleKey] ?? roleConfig.viewer
+                    .replace(/\s+/g, "_")
+                  const role = roleConfig[roleKey]
                   const statusKey = user.is_active ? "active" : "inactive"
                   const status = statusConfig[statusKey]
                   const fullName =
@@ -358,8 +373,8 @@ export default function UsersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className={role.color}>
-                          {role.label}
+                        <Badge variant="secondary" className={role?.color ?? fallbackRoleBadge.color}>
+                          {role?.label ?? user.role_name ?? "Unassigned"}
                         </Badge>
                       </TableCell>
                       <TableCell>
