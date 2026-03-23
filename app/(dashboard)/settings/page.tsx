@@ -10,17 +10,15 @@ export default function SettingsPage() {
           { label: "Settings" },
         ]}
       />
-      <main className="flex-1 overflow-auto">
-        <div className="container py-6 space-y-6">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-            <p className="text-muted-foreground">
-              Manage organization settings and configurations
-            </p>
-          </div>
-          <SettingsTabs />
+      <div className="flex flex-1 flex-col gap-6 p-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">
+            Manage organization settings and configurations
+          </p>
         </div>
-      </main>
+        <SettingsTabs />
+      </div>
     </>
   );
 }

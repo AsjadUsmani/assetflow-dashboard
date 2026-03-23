@@ -36,14 +36,19 @@ import {
   createOrganization,
   type Organization,
 } from "@/lib/services/organizations";
+import { useTheme } from "next-themes";
 
 export function SettingsTabs() {
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const [org, setOrg] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [appearanceSaving, setAppearanceSaving] = useState(false);
+  const [appearanceMessage, setAppearanceMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [industry, setIndustry] = useState("");
   const [status, setStatus] = useState("active");
+  const [appearanceTheme, setAppearanceTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     getOrganizations()
@@ -58,6 +63,29 @@ export function SettingsTabs() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const activeTheme = theme === "system" ? resolvedTheme : theme;
+    setAppearanceTheme(activeTheme === "dark" ? "dark" : "light");
+  }, [theme, resolvedTheme]);
+
+  const handleSaveAppearance = async () => {
+    setAppearanceSaving(true);
+    setAppearanceMessage(null);
+    try {
+      setTheme(appearanceTheme);
+      setAppearanceMessage(`Appearance updated to ${appearanceTheme} mode.`);
+    } finally {
+      setAppearanceSaving(false);
+    }
+  };
+
+  const handleAppearanceThemeToggle = (checked: boolean) => {
+    const nextTheme = checked ? "dark" : "light";
+    setAppearanceTheme(nextTheme);
+    setTheme(nextTheme);
+    setAppearanceMessage(null);
+  };
 
   const handleSaveOrganization = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -473,9 +501,17 @@ export function SettingsTabs() {
                   Enable dark mode by default
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                checked={appearanceTheme === "dark"}
+                onCheckedChange={handleAppearanceThemeToggle}
+              />
             </div>
-            <Button>Save Appearance</Button>
+            {appearanceMessage ? (
+              <p className="text-sm text-muted-foreground">{appearanceMessage}</p>
+            ) : null}
+            <Button onClick={handleSaveAppearance} disabled={appearanceSaving}>
+              {appearanceSaving ? "Saving..." : "Save Appearance"}
+            </Button>
           </CardContent>
         </Card>
       </TabsContent>
