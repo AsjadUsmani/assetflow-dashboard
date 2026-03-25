@@ -58,6 +58,43 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
 
   const assetType = assetTypes.find((t) => String(t.id) === selectedTypeId);
 
+  const getPropertyDefaultValue = (prop: AssetType["properties"][number]): string | number | boolean | undefined => {
+    const dataType = prop.data_type ?? "text";
+    const config = (prop.config ?? {}) as Record<string, unknown>;
+    const defaultFromConfig = config.defaultValue ?? config.default;
+
+    if (dataType === "boolean") {
+      if (typeof defaultFromConfig === "boolean") return defaultFromConfig;
+      // For required boolean properties, default to true to avoid blocking form submit.
+      if (prop.is_required) return true;
+      return undefined;
+    }
+
+    if (dataType === "number") {
+      if (typeof defaultFromConfig === "number") return defaultFromConfig;
+      if (typeof defaultFromConfig === "string" && defaultFromConfig.trim() !== "") {
+        const n = Number(defaultFromConfig);
+        if (!Number.isNaN(n)) return n;
+      }
+      return undefined;
+    }
+
+    if (dataType === "dropdown") {
+      if (typeof defaultFromConfig === "string" && defaultFromConfig.trim() !== "") {
+        return defaultFromConfig;
+      }
+      const options = Array.isArray(config.options) ? (config.options as unknown[]) : [];
+      const firstOption = options.find((opt): opt is string => typeof opt === "string" && opt.trim() !== "");
+      return firstOption;
+    }
+
+    if ((dataType === "date" || dataType === "text") && typeof defaultFromConfig === "string") {
+      return defaultFromConfig;
+    }
+
+    return undefined;
+  };
+
   useEffect(() => {
     if (open) {
       setLoading(true);
@@ -93,9 +130,16 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   }, [open]);
 
   useEffect(() => {
-    setPropertyValues({});
+    const defaults: Record<string, string | number | boolean> = {};
+    (assetType?.properties ?? []).forEach((prop) => {
+      const value = getPropertyDefaultValue(prop);
+      if (value !== undefined) {
+        defaults[prop.name] = value;
+      }
+    });
+    setPropertyValues(defaults);
     setPropertyErrors({});
-  }, [selectedTypeId]);
+  }, [assetType]);
 
   const setPropertyValue = (propName: string, value: string | number | boolean) => {
     setPropertyValues((prev) => ({ ...prev, [propName]: value }));

@@ -153,55 +153,56 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
       {stats.map((stat) => {
-        const CardWrapper = stat.href ? Link : "div";
-        const cardProps = stat.href ? { href: stat.href } : {};
         const isHighlight = stat.highlight;
+        const card = (
+          <Card
+            className={`bg-card border-border transition-colors ${stat.href ? "hover:bg-accent cursor-pointer" : ""} ${isHighlight ? "border-amber-500/50 bg-amber-500/5" : ""}`}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div
+                  className={`flex size-10 items-center justify-center rounded-lg ${isHighlight ? "bg-amber-500/20" : "bg-secondary"}`}
+                >
+                  <stat.icon
+                    className={`size-5 ${isHighlight ? "text-amber-400" : "text-muted-foreground"}`}
+                  />
+                </div>
+                {stat.change && (
+                  <div
+                    className={`flex items-center gap-1 text-xs font-medium ${
+                      stat.trend === "up" ? "text-green-500" : "text-red-500"
+                    }`}
+                  >
+                    {stat.trend === "up" ? (
+                      <TrendingUp className="size-3" />
+                    ) : (
+                      <TrendingDown className="size-3" />
+                    )}
+                    {stat.change}
+                  </div>
+                )}
+              </div>
+              <div className="mt-3">
+                <p
+                  className={`text-2xl font-semibold tracking-tight ${isHighlight ? "text-amber-400" : ""}`}
+                >
+                  {stat.value}
+                </p>
+                <p className="text-sm font-medium text-foreground">
+                  {stat.title}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {stat.description}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        );
 
         return (
-          <CardWrapper href={''} key={stat.title} {...cardProps}>
-            <Card
-              className={`bg-card border-border transition-colors ${stat.href ? "hover:bg-accent cursor-pointer" : ""} ${isHighlight ? "border-amber-500/50 bg-amber-500/5" : ""}`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div
-                    className={`flex size-10 items-center justify-center rounded-lg ${isHighlight ? "bg-amber-500/20" : "bg-secondary"}`}
-                  >
-                    <stat.icon
-                      className={`size-5 ${isHighlight ? "text-amber-400" : "text-muted-foreground"}`}
-                    />
-                  </div>
-                  {stat.change && (
-                    <div
-                      className={`flex items-center gap-1 text-xs font-medium ${
-                        stat.trend === "up" ? "text-green-500" : "text-red-500"
-                      }`}
-                    >
-                      {stat.trend === "up" ? (
-                        <TrendingUp className="size-3" />
-                      ) : (
-                        <TrendingDown className="size-3" />
-                      )}
-                      {stat.change}
-                    </div>
-                  )}
-                </div>
-                <div className="mt-3">
-                  <p
-                    className={`text-2xl font-semibold tracking-tight ${isHighlight ? "text-amber-400" : ""}`}
-                  >
-                    {stat.value}
-                  </p>
-                  <p className="text-sm font-medium text-foreground">
-                    {stat.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {stat.description}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </CardWrapper>
+          <div key={stat.title}>
+            {stat.href ? <Link href={stat.href}>{card}</Link> : card}
+          </div>
         );
       })}
 
