@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -184,8 +185,23 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Package className="size-4" />
+          <div className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-sidebar-accent/40 p-1">
+            <Image
+              src="/icon-logo-light.png"
+              alt="Icon Logo"
+              width={24}
+              height={24}
+              className="block dark:hidden"
+              priority
+            />
+            <Image
+              src="/icon-logo-dark.png"
+              alt="Icon Logo"
+              width={24}
+              height={24}
+              className="hidden dark:block"
+              priority
+            />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
