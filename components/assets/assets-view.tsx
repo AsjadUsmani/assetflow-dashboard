@@ -167,7 +167,7 @@ export function AssetsView() {
           <p className="text-muted-foreground">View and manage all organizational assets</p>
         </div>
         <div className="flex items-center gap-2">
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 CSV

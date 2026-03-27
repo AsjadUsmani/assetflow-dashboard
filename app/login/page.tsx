@@ -1,14 +1,12 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Film, Eye, EyeOff, Loader2, Package } from "lucide-react"
+import { Eye, EyeOff, Loader2, Package } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Card,
   CardContent,
@@ -24,7 +22,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = React.useState(false)
   const [username, setUsername] = React.useState("")
   const [password, setPassword] = React.useState("")
-  const [rememberMe, setRememberMe] = React.useState(false)
 
   const [error, setError] = React.useState<string | null>(null)
 
@@ -38,7 +35,6 @@ export default function LoginPage() {
       await login({
         username,
         password,
-        rememberMe,
       })
       router.push("/dashboard")
     } catch (err) {
@@ -59,7 +55,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">AssetFlow</h1>
           <p className="text-sm text-muted-foreground">
-            Enterprise Coupon Management System
+            Enterprise Assets Management System
           </p>
         </div>
 
@@ -85,15 +81,7 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs text-muted-foreground hover:text-primary"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -122,21 +110,6 @@ export default function LoginPage() {
                     </span>
                   </Button>
                 </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember"
-                  checked={rememberMe}
-                  onCheckedChange={(checked:boolean) =>
-                    setRememberMe(checked as boolean)
-                  }
-                />
-                <Label
-                  htmlFor="remember"
-                  className="text-sm font-normal text-muted-foreground cursor-pointer"
-                >
-                  Remember me
-                </Label>
               </div>
               {error && (
                 <p className="text-sm text-destructive text-center">{error}</p>

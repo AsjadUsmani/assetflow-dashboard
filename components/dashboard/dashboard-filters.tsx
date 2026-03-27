@@ -61,7 +61,7 @@ export function DashboardFilters({ value, onChange }: DashboardFiltersProps) {
       location: "",
       department: "",
       assetType: "",
-      dateRange: "30d",
+      dateRange: "all",
     });
   };
 

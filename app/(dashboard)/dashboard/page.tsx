@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
@@ -16,8 +16,45 @@ import {
   type DashboardFilterState,
 } from "@/components/dashboard/filters";
 
+const DASHBOARD_FILTERS_STORAGE_KEY = "dashboard_filters";
+const VALID_DATE_RANGES = new Set(["7d", "30d", "90d", "1y", "all"]);
+
+function sanitizeFilters(value: unknown): DashboardFilterState {
+  if (!value || typeof value !== "object") return defaultDashboardFilters;
+  const obj = value as Partial<DashboardFilterState>;
+  const dateRange = VALID_DATE_RANGES.has(obj.dateRange ?? "")
+    ? (obj.dateRange as DashboardFilterState["dateRange"])
+    : defaultDashboardFilters.dateRange;
+
+  return {
+    location: typeof obj.location === "string" ? obj.location : "",
+    department: typeof obj.department === "string" ? obj.department : "",
+    assetType: typeof obj.assetType === "string" ? obj.assetType : "",
+    dateRange,
+  };
+}
+
 export default function DashboardPage() {
   const [filters, setFilters] = useState<DashboardFilterState>(defaultDashboardFilters);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(DASHBOARD_FILTERS_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      setFilters(sanitizeFilters(parsed));
+    } catch {
+      // ignore corrupted local storage and keep defaults
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(DASHBOARD_FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    } catch {
+      // ignore storage write failures
+    }
+  }, [filters]);
 
   return (
     <>

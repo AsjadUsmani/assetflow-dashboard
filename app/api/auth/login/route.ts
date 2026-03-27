@@ -40,12 +40,10 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       username?: string
       password?: string
-      rememberMe?: boolean
     }
 
     const username = body.username?.trim() ?? ""
     const password = body.password ?? ""
-    const rememberMe = body.rememberMe ?? false
 
     if (!username || !password) {
       return NextResponse.json(
@@ -84,7 +82,6 @@ export async function POST(req: Request) {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      ...(rememberMe ? { maxAge: 60 * 60 * 24 * 30 } : {}),
     })
     return response
   } catch (e) {

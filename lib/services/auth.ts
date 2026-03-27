@@ -4,7 +4,12 @@ import { handleGlobalApiError } from "./globalApiErrorHandler"
 export type LoginInput = {
   username: string
   password: string
-  rememberMe?: boolean
+}
+
+export type ChangePasswordInput = {
+  current_password: string
+  new_password: string
+  confirm_password: string
 }
 
 export type LoginResult = {
@@ -58,6 +63,24 @@ export async function login(input: LoginInput): Promise<LoginResult> {
   }
 
   return result
+}
+
+export async function changePassword(input: ChangePasswordInput): Promise<{ message: string }> {
+  const res = await fetch("/api/auth/change-password", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+    credentials: "include",
+  })
+
+  const json = (await res.json()) as ApiResponse<{ message: string }>
+  if (!res.ok || !json.success) {
+    const error = new ApiException(json.message || "Failed to change password", res.status)
+    handleGlobalApiError(error)
+    throw error
+  }
+
+  return json.data ?? { message: json.message }
 }
 
 export async function logout(): Promise<void> {

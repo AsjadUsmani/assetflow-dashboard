@@ -9,7 +9,7 @@ export const defaultDashboardFilters: DashboardFilterState = {
   location: "",
   department: "",
   assetType: "",
-  dateRange: "30d",
+  dateRange: "all",
 };
 
 export function getDateRangeStart(dateRange: string): Date | null {

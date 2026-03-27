@@ -248,7 +248,7 @@ export default function UsersPage() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">
                     CSV

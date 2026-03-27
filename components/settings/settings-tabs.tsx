@@ -36,6 +36,7 @@ import {
   createOrganization,
   type Organization,
 } from "@/lib/services/organizations";
+import { changePassword } from "@/lib/services/auth";
 import { useTheme } from "next-themes";
 
 export function SettingsTabs() {
@@ -49,6 +50,12 @@ export function SettingsTabs() {
   const [industry, setIndustry] = useState("");
   const [status, setStatus] = useState("active");
   const [appearanceTheme, setAppearanceTheme] = useState<"light" | "dark">("light");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     getOrganizations()
@@ -128,6 +135,42 @@ export function SettingsTabs() {
       setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setPasswordMessage(null);
+    setPasswordError(null);
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All password fields are required.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New password and confirm password do not match.");
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const result = await changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+      setPasswordMessage(result.message || "Password changed successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (e) {
+      setPasswordError(e instanceof Error ? e.message : "Failed to change password");
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -592,7 +635,56 @@ export function SettingsTabs() {
                 </div>
               </div>
             </div>
-            <Button>Save Security Settings</Button>
+            <Separator />
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div className="space-y-1">
+                <p className="font-medium">Change Password</p>
+                <p className="text-sm text-muted-foreground">
+                  Update your account password while logged in.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="current-password">Current Password</Label>
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              {passwordError ? (
+                <p className="text-sm text-destructive">{passwordError}</p>
+              ) : null}
+              {passwordMessage ? (
+                <p className="text-sm text-muted-foreground">{passwordMessage}</p>
+              ) : null}
+              <Button type="submit" disabled={passwordSaving}>
+                {passwordSaving ? "Updating..." : "Update Password"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 

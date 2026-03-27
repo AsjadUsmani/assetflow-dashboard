@@ -9,12 +9,12 @@ import type { NextRequest } from "next/server"
  *
  * Rules
  * ─────────────────────────────────────────────────
- *  Cookie present + visiting /login or /forgot-password  →  redirect /dashboard
+ *  Cookie present + visiting /login  →  redirect /dashboard
  *  Cookie absent  + visiting a protected page             →  redirect /login
  *  Everything else                                        →  pass through
  */
 
-const PUBLIC_PATHS = ["/login", "/forgot-password"]
+const PUBLIC_PATHS = ["/login"]
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

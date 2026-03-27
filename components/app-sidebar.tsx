@@ -94,6 +94,10 @@ function canAccessItem(item: NavItem): boolean {
   return true;
 }
 
+function normalizeMenuLabel(label: string): string {
+  return label === "Users & Roles" ? "Users" : label;
+}
+
 function NavItemComponent({ item }: { item: NavItem }) {
   const pathname = usePathname();
   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -223,7 +227,7 @@ export function AppSidebar() {
                               }}
                             >
                               <Icon className="size-4" />
-                              <span>{item.label ?? item.path}</span>
+                              <span>{normalizeMenuLabel(item.label ?? item.path)}</span>
                               <ChevronDown className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
                             </SidebarMenuButton>
                           </CollapsibleTrigger>
@@ -236,7 +240,7 @@ export function AppSidebar() {
                                     isActive={pathname === sub.path}
                                   >
                                     <Link href={sub.path}>
-                                      <span>{sub.label ?? sub.path}</span>
+                                      <span>{normalizeMenuLabel(sub.label ?? sub.path)}</span>
                                     </Link>
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
@@ -254,7 +258,7 @@ export function AppSidebar() {
                         >
                           <Link href={item.path}>
                             <Icon className="size-4" />
-                            <span>{item.label ?? item.path}</span>
+                            <span>{normalizeMenuLabel(item.label ?? item.path)}</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
