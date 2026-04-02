@@ -48,6 +48,30 @@ export type DecideRequestBody = {
 }
 
 const BASE = "/workspace/requests"
+const CREATE_ASSET_NAME_MARKER = "[asset_name]"
+
+function normalizeRequest(request: AssetRequest): AssetRequest {
+  if (request.type !== "create" || request.asset_name || !request.justification) {
+    return request
+  }
+
+  const markerPattern = new RegExp(`^\\${CREATE_ASSET_NAME_MARKER}([^\\n]+)\\n?`)
+  const match = request.justification.match(markerPattern)
+  if (!match) return request
+
+  const assetName = match[1]?.trim() || null
+  const cleanedJustification = request.justification.replace(markerPattern, "").trim()
+
+  return {
+    ...request,
+    asset_name: assetName,
+    justification: cleanedJustification || null,
+  }
+}
+
+function normalizeRequests(requests: AssetRequest[]): AssetRequest[] {
+  return requests.map(normalizeRequest)
+}
 
 function buildQuery(q: ListRequestsQuery): string {
   const params = new URLSearchParams()
@@ -60,24 +84,24 @@ function buildQuery(q: ListRequestsQuery): string {
 export async function getRequests(query?: ListRequestsQuery): Promise<AssetRequest[]> {
   const url = query ? `${BASE}${buildQuery(query)}` : BASE
   const json = await apiService.get<AssetRequest[]>(url, true)
-  return json.data ?? []
+  return normalizeRequests(json.data ?? [])
 }
 
 export async function createRequest(body: CreateRequestBody): Promise<AssetRequest> {
   const json = await apiService.post<AssetRequest>(BASE, body, true)
   if (!json.data) throw new Error(json.message ?? "Failed to create request")
-  return json.data
+  return normalizeRequest(json.data)
 }
 
 export async function getRequestById(id: number): Promise<AssetRequest | null> {
   const json = await apiService.get<AssetRequest>(`${BASE}/${id}`, true)
-  return json.data ?? null
+  return json.data ? normalizeRequest(json.data) : null
 }
 
 export async function decideRequest(id: number, body: DecideRequestBody): Promise<AssetRequest> {
   const json = await apiService.post<AssetRequest>(`${BASE}/${id}/decision`, body, true)
   if (!json.data) throw new Error(json.message ?? "Failed to update request status")
-  return json.data
+  return normalizeRequest(json.data)
 }
 
 export async function deleteRequest(id: number): Promise<void> {

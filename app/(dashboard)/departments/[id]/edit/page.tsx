@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, FolderTree } from "lucide-react";
+import { ArrowLeft, FolderTree, Search } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
@@ -18,12 +18,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartmentById, updateDepartment } from "@/lib/services/departments";
 import type { Department } from "@/lib/services/departments";
@@ -36,9 +42,13 @@ export default function EditDepartmentPage() {
   const [dept, setDept] = useState<Department | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [locationId, setLocationId] = useState<string>("");
+  const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const selectedLocation =
+    locations.find((loc) => String(loc.id) === locationId) ?? null;
 
   useEffect(() => {
     const numId = Number(id);
@@ -163,18 +173,48 @@ export default function EditDepartmentPage() {
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 <div className="space-y-2">
                   <Label htmlFor="location">Location *</Label>
-                  <Select value={locationId} onValueChange={setLocationId} required>
-                    <SelectTrigger id="location">
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((loc) => (
-                        <SelectItem key={loc.id} value={String(loc.id)}>
-                          {loc.name} ({loc.organization_name})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover
+                    open={locationPopoverOpen}
+                    onOpenChange={setLocationPopoverOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="w-full justify-between"
+                        aria-label="Select location"
+                      >
+                        <span className="truncate text-left">
+                          {selectedLocation
+                            ? `${selectedLocation.name} (${selectedLocation.organization_name})`
+                            : "Search location"}
+                        </span>
+                        <Search className="ml-2 size-4 shrink-0 opacity-60" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search location by name or organization..." />
+                        <CommandList>
+                          <CommandEmpty>No locations found.</CommandEmpty>
+                          <CommandGroup heading="Locations">
+                            {locations.map((loc) => (
+                              <CommandItem
+                                key={loc.id}
+                                value={`${loc.name} ${loc.organization_name ?? ""}`}
+                                onSelect={() => {
+                                  setLocationId(String(loc.id));
+                                  setLocationPopoverOpen(false);
+                                }}
+                              >
+                                {loc.name} ({loc.organization_name})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">

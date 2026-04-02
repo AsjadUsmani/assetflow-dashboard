@@ -16,7 +16,6 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { getAssets, type Asset } from "@/lib/services/assets";
 import {
-  isInDateRange,
   type DashboardFilterState,
 } from "@/components/dashboard/filters";
 
@@ -46,7 +45,10 @@ export function StockOverview({ filters }: { filters: DashboardFilterState }) {
       try {
         const data = await getAssets({ location, department, assetType });
         if (!isMounted) return;
-        setAssets(data.filter((asset) => isInDateRange(asset.created_at, filters.dateRange)));
+        // STOCK OVERVIEW: Show all assets regardless of creation date
+        // Stock is a snapshot of current inventory, not filtered by activity date
+        // This ensures accurate inventory counts even for older assets
+        setAssets(data);
       } catch {
         // ignore; panel can render empty state
       }
@@ -55,7 +57,7 @@ export function StockOverview({ filters }: { filters: DashboardFilterState }) {
     return () => {
       isMounted = false;
     };
-  }, [filters]);
+  }, [filters.location, filters.department, filters.assetType]);
 
   const stockData: StockItem[] = useMemo(() => {
     const buckets: Record<string, { total: number; available: number; assigned: number }> = {};
@@ -85,7 +87,7 @@ export function StockOverview({ filters }: { filters: DashboardFilterState }) {
         };
       })
       .sort((a, b) => b.total - a.total)
-      .slice(0, 4);
+      .slice(0, 5);
   }, [assets]);
 
   const totalStock = stockData.reduce((acc, item) => acc + item.total, 0);

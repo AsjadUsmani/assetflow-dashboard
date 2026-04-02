@@ -40,6 +40,8 @@ import { getDepartments, type Department } from "@/lib/services/departments";
 import { getWorkspaceUsers, type WorkspaceUser } from "@/lib/services/workspace-users";
 import { getAssetTypes, type AssetType } from "@/lib/services/asset-types";
 
+const CREATE_ASSET_NAME_MARKER = "[asset_name]";
+
 const requestTypes = [
   {
     value: "create",
@@ -171,6 +173,14 @@ function NewRequestForm() {
         reason: formData.reason,
         justification: formData.justification || undefined,
       };
+
+      if (requestType === "create" && formData.assetName.trim()) {
+        const encoded = [
+          `${CREATE_ASSET_NAME_MARKER}${formData.assetName.trim()}`,
+          formData.justification?.trim()
+]       .filter(Boolean).join("\n");
+        body.justification = encoded;
+      }
 
       if (asset) {
         body.asset_id = asset.id;
