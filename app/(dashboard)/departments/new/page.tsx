@@ -143,7 +143,7 @@ export default function NewDepartmentPage() {
                       >
                         <span className="truncate text-left">
                           {selectedLocation
-                            ? `${selectedLocation.name} (${selectedLocation.organization_name})`
+                            ? `${selectedLocation.name}${selectedLocation.organization_name ? ` (${selectedLocation.organization_name})` : ""}`
                             : "Search location"}
                         </span>
                         <Search className="ml-2 size-4 shrink-0 opacity-60" />
@@ -164,7 +164,7 @@ export default function NewDepartmentPage() {
                                   setLocationPopoverOpen(false);
                                 }}
                               >
-                                {loc.name} ({loc.organization_name})
+                                {loc.name}{loc.organization_name ? ` (${loc.organization_name})` : ""}
                               </CommandItem>
                             ))}
                           </CommandGroup>

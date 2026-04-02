@@ -48,19 +48,26 @@ export type DecideRequestBody = {
 }
 
 const BASE = "/workspace/requests"
-const CREATE_ASSET_NAME_MARKER = "[asset_name]"
+export const CREATE_ASSET_NAME_MARKER = "[asset_name]"
+
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+const CREATE_ASSET_NAME_REGEX = new RegExp(
+  `^${escapeRegExp(CREATE_ASSET_NAME_MARKER)}([^\\n]+)\\n?`
+)
 
 function normalizeRequest(request: AssetRequest): AssetRequest {
   if (request.type !== "create" || request.asset_name || !request.justification) {
     return request
   }
 
-  const markerPattern = new RegExp(`^\\${CREATE_ASSET_NAME_MARKER}([^\\n]+)\\n?`)
-  const match = request.justification.match(markerPattern)
+  const match = request.justification.match(CREATE_ASSET_NAME_REGEX)
   if (!match) return request
 
   const assetName = match[1]?.trim() || null
-  const cleanedJustification = request.justification.replace(markerPattern, "").trim()
+  const cleanedJustification = request.justification.replace(CREATE_ASSET_NAME_REGEX, "").trim()
 
   return {
     ...request,

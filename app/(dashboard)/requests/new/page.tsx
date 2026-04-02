@@ -33,14 +33,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { createRequest } from "@/lib/services/requests";
+import { createRequest, CREATE_ASSET_NAME_MARKER } from "@/lib/services/requests";
 import { getAssets, type Asset } from "@/lib/services/assets";
 import { getLocations, type Location } from "@/lib/services/locations";
 import { getDepartments, type Department } from "@/lib/services/departments";
 import { getWorkspaceUsers, type WorkspaceUser } from "@/lib/services/workspace-users";
 import { getAssetTypes, type AssetType } from "@/lib/services/asset-types";
-
-const CREATE_ASSET_NAME_MARKER = "[asset_name]";
 
 const requestTypes = [
   {
