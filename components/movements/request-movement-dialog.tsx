@@ -41,6 +41,16 @@ export function RequestMovementDialog() {
   const [toLocationId, setToLocationId] = useState<string>("");
   const [fromDepartmentId, setFromDepartmentId] = useState<string>("");
   const [toDepartmentId, setToDepartmentId] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const canSubmit =
+    Boolean(movementType) &&
+    Boolean(selectedAsset) &&
+    Boolean(fromLocationId) &&
+    Boolean(toLocationId) &&
+    Boolean(fromDepartmentId) &&
+    Boolean(toDepartmentId) &&
+    !submitting;
 
   useEffect(() => {
     let isMounted = true;
@@ -70,21 +80,38 @@ export function RequestMovementDialog() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!open) {
+      setMovementType("");
+      setSelectedAsset("");
+      setFromLocationId("");
+      setToLocationId("");
+      setFromDepartmentId("");
+      setToDepartmentId("");
+      setSubmitting(false);
+    }
+  }, [open]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!movementType) return;
+    if (!canSubmit) return;
 
-    await createRequest({
-      type: movementType,
-      asset_id: selectedAsset ? Number(selectedAsset) : undefined,
-      from_location_id: fromLocationId ? Number(fromLocationId) : undefined,
-      to_location_id: toLocationId ? Number(toLocationId) : undefined,
-      from_department_id: fromDepartmentId ? Number(fromDepartmentId) : undefined,
-      to_department_id: toDepartmentId ? Number(toDepartmentId) : undefined,
-      reason: "Movement request from Movements screen",
-    });
+    setSubmitting(true);
+    try {
+      await createRequest({
+        type: movementType,
+        asset_id: selectedAsset ? Number(selectedAsset) : undefined,
+        from_location_id: fromLocationId ? Number(fromLocationId) : undefined,
+        to_location_id: toLocationId ? Number(toLocationId) : undefined,
+        from_department_id: fromDepartmentId ? Number(fromDepartmentId) : undefined,
+        to_department_id: toDepartmentId ? Number(toDepartmentId) : undefined,
+        reason: "Movement request from Movements screen",
+      });
 
-    setOpen(false);
+      setOpen(false);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -105,7 +132,7 @@ export function RequestMovementDialog() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="movement-type">Movement Type</Label>
+              <Label htmlFor="movement-type">Movement Type *</Label>
               <Select value={movementType} onValueChange={setMovementType}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select movement type" />
@@ -120,7 +147,7 @@ export function RequestMovementDialog() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="asset">Asset</Label>
+              <Label htmlFor="asset">Asset *</Label>
               <Select value={selectedAsset} onValueChange={setSelectedAsset}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select asset" />
@@ -138,7 +165,7 @@ export function RequestMovementDialog() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="from-location">From Location</Label>
+                <Label htmlFor="from-location">From Location *</Label>
                 <Select value={fromLocationId} onValueChange={setFromLocationId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Current location" />
@@ -153,7 +180,7 @@ export function RequestMovementDialog() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="to-location">To Location</Label>
+                <Label htmlFor="to-location">To Location *</Label>
                 <Select value={toLocationId} onValueChange={setToLocationId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Destination" />
@@ -171,7 +198,7 @@ export function RequestMovementDialog() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="from-department">From Department</Label>
+                <Label htmlFor="from-department">From Department *</Label>
                 <Select
                   value={fromDepartmentId}
                   onValueChange={setFromDepartmentId}
@@ -195,7 +222,7 @@ export function RequestMovementDialog() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="to-department">To Department</Label>
+                <Label htmlFor="to-department">To Department *</Label>
                 <Select
                   value={toDepartmentId}
                   onValueChange={setToDepartmentId}
@@ -246,10 +273,13 @@ export function RequestMovementDialog() {
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
+              disabled={submitting}
             >
               Cancel
             </Button>
-            <Button type="submit">Submit Request</Button>
+            <Button type="submit" disabled={!canSubmit}>
+              {submitting ? "Submitting..." : "Submit Request"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

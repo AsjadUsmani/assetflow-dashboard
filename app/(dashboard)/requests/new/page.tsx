@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { createRequest } from "@/lib/services/requests";
+import { createRequest, CREATE_ASSET_NAME_MARKER } from "@/lib/services/requests";
 import { getAssets, type Asset } from "@/lib/services/assets";
 import { getLocations, type Location } from "@/lib/services/locations";
 import { getDepartments, type Department } from "@/lib/services/departments";
@@ -171,6 +171,14 @@ function NewRequestForm() {
         reason: formData.reason,
         justification: formData.justification || undefined,
       };
+
+      if (requestType === "create" && formData.assetName.trim()) {
+        const encoded = [
+          `${CREATE_ASSET_NAME_MARKER}${formData.assetName.trim()}`,
+          formData.justification?.trim()
+]       .filter(Boolean).join("\n");
+        body.justification = encoded;
+      }
 
       if (asset) {
         body.asset_id = asset.id;

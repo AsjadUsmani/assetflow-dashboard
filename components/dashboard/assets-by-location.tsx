@@ -105,7 +105,13 @@ export function AssetsByLocation({ filters }: { filters: DashboardFilterState })
       else bucket.assigned += 1;
     });
 
-    return Object.values(byLocation);
+    return Object.values(byLocation)
+      .filter((row) => row.assets > 0)
+      .sort((a, b) => {
+        if (b.assets !== a.assets) return b.assets - a.assets;
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, 5);
   }, [assets, locations]);
 
   return (

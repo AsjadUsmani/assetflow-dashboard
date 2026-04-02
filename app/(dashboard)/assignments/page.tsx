@@ -173,7 +173,7 @@ export default function AssignmentsPage() {
               </p>
             </div>
             <Button asChild>
-              <Link href="/assignments/new">
+              <Link href="/requests/new?type=assign">
                 <Plus className="mr-2 size-4" />
                 New Assignment
               </Link>

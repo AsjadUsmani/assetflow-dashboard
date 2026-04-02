@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, Loader2, Package } from "lucide-react"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -50,8 +51,23 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex size-12 items-center justify-center rounded-xl bg-primary">
-            <Package className="size-6 text-primary-foreground" />
+          <div className="flex size-12 items-center justify-center overflow-hidden rounded-xl bg-sidebar-accent/40 p-1">
+            <Image
+              src="/icon-logo-light.png"
+              alt="Icon Logo"
+              width={28}
+              height={28}
+              className="block dark:hidden"
+              priority
+            />
+            <Image
+              src="/icon-logo-dark.png"
+              alt="Icon Logo"
+              width={28}
+              height={28}
+              className="hidden dark:block"
+              priority
+            />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">AssetFlow</h1>
           <p className="text-sm text-muted-foreground">
