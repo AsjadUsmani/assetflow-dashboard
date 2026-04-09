@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import {
   ArrowRightLeft,
@@ -77,6 +77,7 @@ export function PendingApprovals({ filters }: { filters: DashboardFilterState })
     const location = filters.location ? Number(filters.location) : undefined;
     const department = filters.department ? Number(filters.department) : undefined;
     const assetType = filters.assetType ? Number(filters.assetType) : undefined;
+    const PENDING_STATUSES = ["pending", "in_review"];
 
     let isMounted = true;
     (async () => {
@@ -104,9 +105,15 @@ export function PendingApprovals({ filters }: { filters: DashboardFilterState })
     };
   }, [filters]);
 
-  const pendingRequests = requests.filter((req) =>
+  const pendingRequests = useMemo(() => {
+  return requests.filter((req) =>
     ["pending", "in_review"].includes(req.status)
   );
+  }, [requests]);
+
+  const topRequests = useMemo(() => {
+    return pendingRequests.slice(0, 5);
+  }, [pendingRequests]);
 
   return (
     <Card className="bg-card border-border">
@@ -131,7 +138,7 @@ export function PendingApprovals({ filters }: { filters: DashboardFilterState })
           </div>
         ) : (
           <div className="space-y-3">
-            {pendingRequests.map((request) => {
+            {topRequests.map((request) => {
               const Icon = getRequestIcon(request.type);
               const assetName = request.asset_name || "New Asset";
               const requesterName = request.requested_by_name || "Unknown";
@@ -192,7 +199,7 @@ export function PendingApprovals({ filters }: { filters: DashboardFilterState })
 
         <Button variant="ghost" className="w-full mt-3" asChild>
           <Link href="/requests">
-            View all requests
+            View all requests {pendingRequests.length > 5 && `(${pendingRequests.length})`}
             <ChevronRight className="ml-2 size-4" />
           </Link>
         </Button>

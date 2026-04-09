@@ -165,6 +165,22 @@ export default function UsersPage() {
   const adminCount = users.filter((u) =>
     (u.role_name ?? "").toLowerCase().includes("admin"),
   ).length
+  const now = new Date()
+  const activeNowCount = users.filter((u) => {
+    if (!u.last_login) return false
+    const lastLogin = new Date(u.last_login)
+    if (Number.isNaN(lastLogin.getTime())) return false
+    return now.getTime() - lastLogin.getTime() <= 15 * 60 * 1000
+  }).length
+  const loginsThisMonth = users.filter((u) => {
+    if (!u.last_login) return false
+    const lastLogin = new Date(u.last_login)
+    if (Number.isNaN(lastLogin.getTime())) return false
+    return (
+      lastLogin.getFullYear() === now.getFullYear() &&
+      lastLogin.getMonth() === now.getMonth()
+    )
+  }).length
   const roleOptions = React.useMemo(() => {
     const uniq = new Set<string>()
     for (const user of users) {
@@ -215,23 +231,23 @@ export default function UsersPage() {
             <Activity className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
+            <div className="text-2xl font-bold">{activeNowCount}</div>
             <p className="text-xs text-muted-foreground">
-              Users online right now
+              Last 15 minutes
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Actions</CardTitle>
+            <CardTitle className="text-sm font-medium">Logins This Month</CardTitle>
             <Calendar className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {filteredUsers.length.toString()}
+              {loginsThisMonth}
             </div>
             <p className="text-xs text-muted-foreground">
-              This month
+              Based on last login
             </p>
           </CardContent>
         </Card>

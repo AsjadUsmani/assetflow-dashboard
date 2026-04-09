@@ -3,7 +3,7 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 function Input({ className, type, onInput, max, ...props }: React.ComponentProps<'input'>) {
-  const handleInput: React.FormEventHandler<HTMLInputElement> = (event) => {
+  const handleInput: React.ComponentProps<'input'>['onInput'] = (event) => {
     if (type === 'date') {
       const input = event.currentTarget
       const raw = input.value

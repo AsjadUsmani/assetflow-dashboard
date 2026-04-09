@@ -7,8 +7,6 @@ import {
   Projector,
   Mouse,
   Wrench,
-  TrendingUp,
-  TrendingDown,
   Package,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,8 +24,7 @@ interface StockItem {
   available: number;
   assigned: number;
   lowStock: boolean;
-  trend: "up" | "down" | "stable";
-  trendValue: string;
+  availabilityPercent: number;
 }
 
 const ICONS = [Monitor, Projector, Mouse, Wrench];
@@ -75,6 +72,7 @@ export function StockOverview({ filters }: { filters: DashboardFilterState }) {
     return Object.entries(buckets)
       .map(([category, value], index) => {
         const ratio = value.total ? value.available / value.total : 0;
+        const availabilityPercent = Math.round(ratio * 100);
         return {
           category,
           icon: ICONS[index % ICONS.length],
@@ -82,8 +80,7 @@ export function StockOverview({ filters }: { filters: DashboardFilterState }) {
           available: value.available,
           assigned: value.assigned,
           lowStock: ratio < 0.2,
-          trend: "stable" as const,
-          trendValue: "0%",
+          availabilityPercent: availabilityPercent,
         };
       })
       .sort((a, b) => b.total - a.total)
@@ -108,7 +105,6 @@ export function StockOverview({ filters }: { filters: DashboardFilterState }) {
       </CardHeader>
       <CardContent className="grid gap-4">
         {stockData.map((item) => {
-          const availablePercent = Math.round((item.available / item.total) * 100);
           const Icon = item.icon;
 
           return (
@@ -131,23 +127,13 @@ export function StockOverview({ filters }: { filters: DashboardFilterState }) {
                       Low Stock
                     </Badge>
                   )}
-                  <div
-                    className={`flex items-center gap-1 text-xs font-medium ${
-                      item.trend === "up"
-                        ? "text-success"
-                        : item.trend === "down"
-                          ? "text-destructive"
-                          : "text-muted-foreground"
-                    }`}
-                  >
-                    {item.trend === "up" && <TrendingUp className="size-3" />}
-                    {item.trend === "down" && <TrendingDown className="size-3" />}
-                    {item.trendValue}
+                  <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                    {item.availabilityPercent}%
                   </div>
                 </div>
               </div>
               <Progress
-                value={availablePercent}
+                value={item.availabilityPercent}
                 className={`h-2 ${item.lowStock ? "[&>div]:bg-destructive" : ""}`}
               />
             </div>
