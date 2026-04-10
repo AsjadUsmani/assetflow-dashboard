@@ -15,7 +15,7 @@ export default function MovementsPage() {
     status: "",
     fromLocation: "",
     toLocation: "",
-    dateRange: "30d",
+    dateRange: "all",
   });
 
   return (

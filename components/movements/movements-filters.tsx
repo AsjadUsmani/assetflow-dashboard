@@ -54,7 +54,7 @@ export function MovementsFilters({
   const setFilter = (key: keyof MovementsFiltersState, value: string) => {
     onFiltersChange({
       ...filters,
-      [key]: key === "dateRange" && !value ? "30d" : value,
+      [key]: key === "dateRange" && !value ? "all" : value,
     });
   };
 
@@ -68,7 +68,7 @@ export function MovementsFilters({
       status: "",
       fromLocation: "",
       toLocation: "",
-      dateRange: "30d",
+      dateRange: "all",
     });
   };
 
