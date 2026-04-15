@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, Search } from "lucide-react"
 
 import { AppHeader } from "@/components/app-header"
 import { Button } from "@/components/ui/button"
@@ -23,10 +23,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { apiService } from "@/lib/services/api-service"
 import { useToast } from "@/components/ui/use-toast"
 import { getDepartments, type Department } from "@/lib/services/departments"
+import {
+  getWorkspaceRoles,
+  getWorkspaceUserMeta,
+  type CountryOption,
+  type UserOfficeOption,
+} from "@/lib/services/workspace-users"
 
 type Role = { id: number; name: string }
 
@@ -36,88 +54,87 @@ export default function AddUserPage() {
   const [isLoading, setIsLoading] = React.useState(false)
   const [roles, setRoles] = React.useState<Role[]>([])
   const [departments, setDepartments] = React.useState<Department[]>([])
+  const [countryOptions, setCountryOptions] = React.useState<CountryOption[]>([])
+  const [officeOptions, setOfficeOptions] = React.useState<UserOfficeOption[]>([])
 
   const [username, setUsername] = React.useState("")
   const [email, setEmail] = React.useState("")
-  const [mobile, setMobile] = React.useState("")
-  const [firstName, setFirstName] = React.useState("")
-  const [lastName, setLastName] = React.useState("")
-  const [roleId, setRoleId] = React.useState("")
   const [password, setPassword] = React.useState("")
-  const [isActive, setIsActive] = React.useState(true)
+  const [roleId, setRoleId] = React.useState("")
+  const [rolePopoverOpen, setRolePopoverOpen] = React.useState(false)
   const [departmentId, setDepartmentId] = React.useState("")
+  const [departmentPopoverOpen, setDepartmentPopoverOpen] = React.useState(false)
+  const [countryId, setCountryId] = React.useState("")
+  const [countryPopoverOpen, setCountryPopoverOpen] = React.useState(false)
+  const [city, setCity] = React.useState("")
+  const [title, setTitle] = React.useState("")
+  const [office, setOffice] = React.useState("")
+  const [isActive, setIsActive] = React.useState(true)
+
+  const hasValidEmail = /^\S+@\S+\.\S+$/.test(email.trim())
+  const hasMinPasswordLength = password.trim().length >= 8
+  const canSubmit =
+    !isLoading &&
+    Boolean(username.trim()) &&
+    hasValidEmail &&
+    hasMinPasswordLength &&
+    Boolean(roleId) &&
+    Boolean(countryId) &&
+    Boolean(office)
+
+  const selectedRole = roles.find((r) => String(r.id) === roleId)
+  const selectedDepartment = departments.find((d) => String(d.id) === departmentId)
+  const selectedCountry = countryOptions.find((c) => String(c.id) === countryId)
 
   React.useEffect(() => {
-    const controller = new AbortController()
-    async function load() {
-      try {
-        const [rolesRes, depts] = await Promise.all([
-          apiService.get<Role[]>("/workspace/roles"),
-          getDepartments(),
-        ])
-        if (controller.signal.aborted) return
-        setRoles(rolesRes.data ?? [])
-        setDepartments(depts)
-      } catch {
-        if (controller.signal.aborted) return
-        setRoles([])
-        setDepartments([])
-      }
+  const controller = new AbortController()
+
+  async function load() {
+    try {
+      const [roles, depts, meta] = await Promise.all([
+        getWorkspaceRoles(),
+        getDepartments(),
+        getWorkspaceUserMeta(),
+      ])
+
+      if (controller.signal.aborted) return
+
+      setRoles(roles)
+      setDepartments(depts)
+      setCountryOptions(meta.country_options ?? [])
+      setOfficeOptions(meta.office_options ?? [])
+    } catch {
+      if (controller.signal.aborted) return
+
+      setRoles([])
+      setDepartments([])
+      setCountryOptions([])
+      setOfficeOptions([])
     }
+  }
+
     void load()
     return () => controller.abort()
   }, [])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!username.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Username is required",
-      })
-      return
-    }
-    if (!password.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Password is required",
-      })
-      return
-    }
-    if (!roleId) {
-      toast({
-        variant: "destructive",
-        title: "Role is required",
-      })
-      return
-    }
 
     setIsLoading(true)
     try {
-      const res = await apiService.post("/workspace/users", {
+      await apiService.post("/workspace/users", {
         username: username.trim(),
         email: email.trim() || null,
-        mobile: mobile.trim() || null,
-        first_name: firstName.trim() || null,
-        last_name: lastName.trim() || null,
         password: password.trim(),
         role_id: Number(roleId),
+        department_id: Number(departmentId) || null,
+        country_id: Number(countryId),
+        city: city.trim() || null,
+        title: title.trim() || null,
+        office,
         is_active: isActive,
       })
 
-      const newUserId = (res as any)?.data?.id as number | undefined
-
-      // If a department is selected, mark this user as that department's HOD.
-      // If no department is selected, the user acts as a global admin based on role only.
-      if (newUserId && departmentId) {
-        try {
-          await apiService.put(`/workspace/departments/${departmentId}`, {
-            hod_id: newUserId,
-          })
-        } catch {
-          // If this fails we still keep the user; optional toast could be added later.
-        }
-      }
       toast({
         title: "User created",
         description: "The user has been added.",
@@ -152,11 +169,9 @@ export default function AddUserPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Add User
-              </h1>
+              <h1 className="text-2xl font-semibold tracking-tight">Add User</h1>
               <p className="text-muted-foreground">
-                Create a new user with username, password and role.
+                Create a user with display name, title, department, office and status.
               </p>
             </div>
           </div>
@@ -167,15 +182,13 @@ export default function AddUserPage() {
                 <CardHeader>
                   <CardTitle>User details</CardTitle>
                   <CardDescription>
-                    Username, password, contact info and role.
+                    Capture the profile fields that are stored on the user record.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="username">
-                        Username <span className="text-destructive">*</span>
-                      </Label>
+                      <Label htmlFor="username">Display name *</Label>
                       <Input
                         id="username"
                         value={username}
@@ -183,20 +196,7 @@ export default function AddUserPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="password">
-                        Password <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email">Email address *</Label>
                       <Input
                         id="email"
                         type="email"
@@ -204,79 +204,174 @@ export default function AddUserPage() {
                         onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="mobile">Mobile</Label>
-                      <Input
-                        id="mobile"
-                        value={mobile}
-                        onChange={(e) => setMobile(e.target.value)}
-                      />
-                    </div>
                   </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">First name</Label>
-                      <Input
-                        id="firstName"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                      />
+                      <Label htmlFor="role">Role *</Label>
+                      <Popover open={rolePopoverOpen} onOpenChange={setRolePopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start gap-2 font-normal">
+                            <Search className="size-4" />
+                            {selectedRole ? selectedRole.name : "Search or select role"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-75 p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search roles..." />
+                            <CommandList>
+                              <CommandEmpty>No roles found.</CommandEmpty>
+                              <CommandGroup>
+                                {roles.map((role) => (
+                                  <CommandItem
+                                    key={role.id}
+                                    value={role.name}
+                                    onSelect={() => {
+                                      setRoleId(String(role.id))
+                                      setRolePopoverOpen(false)
+                                    }}
+                                  >
+                                    {role.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last name</Label>
-                      <Input
-                        id="lastName"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                      />
+                      <Label htmlFor="department">Department</Label>
+                      <Popover open={departmentPopoverOpen} onOpenChange={setDepartmentPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start gap-2 font-normal">
+                            <Search className="size-4" />
+                            {selectedDepartment
+                              ? selectedDepartment.location_name
+                                ? `${selectedDepartment.location_name} - ${selectedDepartment.name}`
+                                : selectedDepartment.name
+                              : "Search or select department"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-75 p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search departments by name..." />
+                            <CommandList>
+                              <CommandEmpty>No departments found.</CommandEmpty>
+                              <CommandGroup>
+                                {departments.map((department) => (
+                                  <CommandItem
+                                    key={department.id}
+                                    value={department.location_name
+                                      ? `${department.location_name} ${department.name}`
+                                      : department.name}
+                                    onSelect={() => {
+                                      setDepartmentId(String(department.id))
+                                      setDepartmentPopoverOpen(false)
+                                    }}
+                                  >
+                                    {department.location_name
+                                      ? `${department.location_name} - ${department.name}`
+                                      : department.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Role <span className="text-destructive">*</span></Label>
-                    <Select value={roleId} onValueChange={setRoleId}>
-                      <SelectTrigger id="role">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((r) => (
-                          <SelectItem key={r.id} value={String(r.id)}>
-                            {r.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Title</Label>
+                      <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City</Label>
+                      <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
+                    </div>
                   </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="country">Country or Region *</Label>
+                      <Popover open={countryPopoverOpen} onOpenChange={setCountryPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start gap-2 font-normal">
+                            <Search className="size-4" />
+                            {selectedCountry ? selectedCountry.name : "Search or select country"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-75 p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search countries..." />
+                            <CommandList>
+                              <CommandEmpty>No countries found.</CommandEmpty>
+                              <CommandGroup>
+                                {countryOptions.map((country) => (
+                                  <CommandItem
+                                    key={country.id}
+                                    value={country.name}
+                                    onSelect={() => {
+                                      setCountryId(String(country.id))
+                                      setCountryPopoverOpen(false)
+                                    }}
+                                  >
+                                    {country.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="office">Office *</Label>
+                      <Select value={office} onValueChange={setOffice}>
+                        <SelectTrigger id="office">
+                          <SelectValue placeholder="Select office" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {officeOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password *</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="department">
-                      Department (optional for HOD / location admin)
-                    </Label>
+                    <Label htmlFor="isActive">Block</Label>
                     <Select
-                      value={departmentId}
-                      onValueChange={setDepartmentId}
+                      value={isActive ? "active" : "inactive"}
+                      onValueChange={(value) => setIsActive(value === "active")}
                     >
-                      <SelectTrigger id="department">
-                        <SelectValue placeholder="All departments (global admin)" />
+                      <SelectTrigger id="isActive">
+                        <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
-                        {departments.map((d) => (
-                          <SelectItem key={d.id} value={String(d.id)}>
-                            {d.location_name ? `${d.location_name} – ${d.name}` : d.name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Leave empty to make this user an admin for all departments. If you choose a
-                      department, this user becomes the Head of that department for approvals.
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="isActive"
-                      checked={isActive}
-                      onCheckedChange={setIsActive}
-                    />
-                    <Label htmlFor="isActive">Active</Label>
                   </div>
                 </CardContent>
               </Card>
@@ -290,10 +385,8 @@ export default function AddUserPage() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading && (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                  )}
+                <Button type="submit" disabled={!canSubmit}>
+                  {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
                   Add User
                 </Button>
               </div>

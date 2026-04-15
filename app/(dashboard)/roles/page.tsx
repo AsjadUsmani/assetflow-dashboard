@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { apiService } from "@/lib/services/api-service"
 
 type Role = {
@@ -28,36 +29,39 @@ type Role = {
 export default function RolesPage() {
   const [search, setSearch] = React.useState("")
   const [roles, setRoles] = React.useState<Role[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
+
+  const filteredRoles = React.useMemo(() => {
+    const term = search.trim().toLowerCase()
+    return term
+      ? roles.filter((r) => `${r.name} ${r.description ?? ""}`.toLowerCase().includes(term))
+      : roles
+  }, [roles, search])
 
   React.useEffect(() => {
     const controller = new AbortController()
 
     async function load() {
+      setIsLoading(true)
       try {
         const res = await apiService.get<Role[]>("/workspace/roles")
-        if (!controller.signal.aborted && res.data) {
-          const items = res.data
-          const term = search.trim().toLowerCase()
-          setRoles(
-            term
-              ? items.filter((r) =>
-                  `${r.name} ${r.description ?? ""}`
-                    .toLowerCase()
-                    .includes(term),
-                )
-              : items,
-          )
+        if (!controller.signal.aborted) {
+          setRoles(res.data ?? [])
         }
       } catch {
         if (!controller.signal.aborted) {
           setRoles([])
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false)
         }
       }
     }
 
     void load()
     return () => controller.abort()
-  }, [search])
+  }, [])
 
   return (
     <>
@@ -95,60 +99,74 @@ export default function RolesPage() {
           </div>
         </div>
 
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[80px] text-right">
-                  Permissions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {roles.map((role) => (
-                <TableRow key={role.id}>
-                  <TableCell>{role.id}</TableCell>
-                  <TableCell className="font-medium">{role.name}</TableCell>
-                  <TableCell className="max-w-[260px] truncate text-sm text-muted-foreground">
-                    {role.description ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={role.is_active ? "default" : "secondary"}>
-                      {role.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-foreground"
-                      title="Edit permissions"
-                    >
-                      <Link href={`/roles/${role.id}/permissions`}>
-                        <Shield className="size-4" />
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
+        {isLoading ? (
+          <div className="rounded-lg border p-4">
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="grid grid-cols-5 gap-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
               ))}
-              {roles.length === 0 && (
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                      <BadgeCheck className="size-5" />
-                      <span>No roles found</span>
-                    </div>
-                  </TableCell>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-20 text-right">Permissions</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {filteredRoles.map((role) => (
+                  <TableRow key={role.id}>
+                    <TableCell>{role.id}</TableCell>
+                    <TableCell className="font-medium">{role.name}</TableCell>
+                    <TableCell className="max-w-65 truncate text-sm text-muted-foreground">
+                      {role.description ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={role.is_active ? "default" : "secondary"}>
+                        {role.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-foreground"
+                        title="Edit permissions"
+                      >
+                        <Link href={`/roles/${role.id}/permissions`}>
+                          <Shield className="size-4" />
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredRoles.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                        <BadgeCheck className="size-5" />
+                        <span>No roles found</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
     </>
   )

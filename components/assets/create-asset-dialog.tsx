@@ -417,7 +417,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                 <SelectContent>
                   {users.filter((u) => u.is_active).map((user) => (
                     <SelectItem key={user.id} value={String(user.id)}>
-                      {[user.first_name, user.last_name].filter(Boolean).join(" ") || user.username}
+                      {user.username}
                     </SelectItem>
                   ))}
                 </SelectContent>

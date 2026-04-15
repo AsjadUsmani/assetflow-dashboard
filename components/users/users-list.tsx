@@ -39,11 +39,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getWorkspaceUsers, type WorkspaceUser } from "@/lib/services/workspace-users";
-import { getDepartments, type Department } from "@/lib/services/departments";
 
 function formatName(user: WorkspaceUser): string {
-  const full = [user.first_name, user.last_name].filter(Boolean).join(" ");
-  return full || user.username;
+  return user.username || user.email || "";
 }
 
 function formatRole(roleName: string | null): string {
@@ -56,7 +54,6 @@ function formatRole(roleName: string | null): string {
 
 export function UsersList() {
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -66,10 +63,9 @@ export function UsersList() {
     let isMounted = true;
     (async () => {
       try {
-        const [userList, deptList] = await Promise.all([getWorkspaceUsers(), getDepartments()]);
+        const userList = await getWorkspaceUsers();
         if (!isMounted) return;
         setUsers(userList);
-        setDepartments(deptList);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -113,15 +109,6 @@ export function UsersList() {
 
   const total = users.length;
   const active = users.filter((u) => u.is_active).length;
-
-  const getUserDepartmentsLabel = (userId: number): string => {
-    const hodDepts = departments.filter((d) => d.hod_id === userId);
-    if (hodDepts.length === 0) return "—";
-    if (hodDepts.length === 1) {
-      return hodDepts[0].name;
-    }
-    return `${hodDepts.length} departments`;
-  };
 
   return (
     <div className="space-y-6">
@@ -238,7 +225,7 @@ export function UsersList() {
               </TableHead>
               <TableHead>User</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Department (HOD)</TableHead>
+              <TableHead>Office</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Login</TableHead>
               <TableHead className="w-12" />
@@ -247,7 +234,7 @@ export function UsersList() {
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                <TableCell colSpan={7} className="text-sm text-muted-foreground">
                   Loading users...
                 </TableCell>
               </TableRow>
@@ -289,6 +276,9 @@ export function UsersList() {
                           <div className="text-xs text-muted-foreground">
                             {user.email ?? user.username}
                           </div>
+                            <div className="text-xs text-muted-foreground">
+                              {user.department_name ?? "—"}
+                            </div>
                         </div>
                       </div>
                     </TableCell>
@@ -296,7 +286,7 @@ export function UsersList() {
                       <Badge variant="outline">{roleLabel}</Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {getUserDepartmentsLabel(user.id)}
+                      {user.office ?? "—"}
                     </TableCell>
                     <TableCell>
                       {user.is_active ? (

@@ -118,7 +118,7 @@ export function GlobalSearch() {
     // Search users
     users.forEach((user) => {
       const fullName =
-        [user.first_name, user.last_name].filter(Boolean).join(" ") || user.username;
+        user.username;
       const email = user.email ?? "";
       if (
         fullName.toLowerCase().includes(searchQuery) ||
