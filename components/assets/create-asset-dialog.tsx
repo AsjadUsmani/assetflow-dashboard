@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, AlertCircle } from "lucide-react";
+import { Plus, AlertCircle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,15 +24,28 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { getAssetTypes } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
-import { getWorkspaceUsers } from "@/lib/services/workspace-users";
+import { getWorkspaceRoles, getWorkspaceUsers } from "@/lib/services/workspace-users";
 import { createAsset, type CreateAssetBody } from "@/lib/services/assets";
 import type { AssetType } from "@/lib/services/asset-types";
 import type { Location } from "@/lib/services/locations";
 import type { Department } from "@/lib/services/departments";
-import type { WorkspaceUser } from "@/lib/services/workspace-users";
+import type { WorkspaceUser, Role } from "@/lib/services/workspace-users";
 
 export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [open, setOpen] = useState(false);
@@ -40,6 +53,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +64,11 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [locationId, setLocationId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [assignedUserId, setAssignedUserId] = useState("");
+  const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
+  const [departmentPopoverOpen, setDepartmentPopoverOpen] = useState(false);
+  const [assignedUserPopoverOpen, setAssignedUserPopoverOpen] = useState(false);
+  const [managedByRoleId, setManagedByRoleId] = useState("");
+  const [managedByPopoverOpen, setManagedByPopoverOpen] = useState(false);
   const [purchaseDate, setPurchaseDate] = useState("");
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -57,6 +76,11 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [propertyErrors, setPropertyErrors] = useState<Record<string, boolean>>({});
 
   const assetType = assetTypes.find((t) => String(t.id) === selectedTypeId);
+
+  const selectedLocation = locations.find((loc) => String(loc.id) === locationId);
+  const selectedDepartment = departments.find((dept) => String(dept.id) === departmentId);
+  const selectedAssignedUser = users.find((user) => String(user.id) === assignedUserId);
+  const selectedManagedByRole = roles.find((role) => String(role.id) === managedByRoleId);
 
   const getPropertyDefaultValue = (prop: AssetType["properties"][number]): string | number | boolean | undefined => {
     const dataType = prop.data_type ?? "text";
@@ -98,12 +122,13 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   useEffect(() => {
     if (open) {
       setLoading(true);
-      Promise.all([getAssetTypes(), getLocations(), getDepartments(), getWorkspaceUsers()])
-        .then(([types, locs, depts, usrs]) => {
+      Promise.all([getAssetTypes(), getLocations(), getDepartments(), getWorkspaceUsers(), getWorkspaceRoles()])
+        .then(([types, locs, depts, usrs, rls]) => {
           setAssetTypes(types);
           setLocations(locs);
           setDepartments(depts);
           setUsers(usrs);
+          setRoles(rls.filter((r) => r.name && r.name.trim().length > 0));
         })
         .catch((err) => {
           setError(err instanceof Error ? err.message : "Failed to load data");
@@ -119,6 +144,11 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setLocationId("");
       setDepartmentId("");
       setAssignedUserId("");
+      setLocationPopoverOpen(false);
+      setDepartmentPopoverOpen(false);
+      setAssignedUserPopoverOpen(false);
+      setManagedByRoleId("");
+      setManagedByPopoverOpen(false);
       setPurchaseDate("");
       setWarrantyEndDate("");
       setExpiryDate("");
@@ -185,6 +215,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         location_id: locationId ? Number(locationId) : undefined,
         department_id: departmentId ? Number(departmentId) : undefined,
         assigned_to_user_id: assignedUserId ? Number(assignedUserId) : undefined,
+        managed_by_role_id: managedByRoleId ? Number(managedByRoleId) : undefined,
         purchase_date: purchaseDate || undefined,
         warranty_end_date: warrantyEndDate || undefined,
         expiry_date: expiryDate || undefined,
@@ -384,44 +415,137 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
           <TabsContent value="assignment" className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Location</Label>
-              <Select value={locationId} onValueChange={setLocationId}>
-                <SelectTrigger className="bg-secondary border-0">
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc.id} value={String(loc.id)}>{loc.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start gap-2 font-normal">
+                    <Search className="size-4" />
+                    {selectedLocation ? selectedLocation.name : "Search or select location"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search locations..." />
+                    <CommandList>
+                      <CommandEmpty>No locations found.</CommandEmpty>
+                      <CommandGroup>
+                        {locations.map((loc) => (
+                          <CommandItem
+                            key={loc.id}
+                            value={loc.name}
+                            onSelect={() => {
+                              setLocationId(String(loc.id));
+                              setLocationPopoverOpen(false);
+                            }}
+                          >
+                            {loc.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label>Department</Label>
-              <Select value={departmentId} onValueChange={setDepartmentId}>
-                <SelectTrigger className="bg-secondary border-0">
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={String(dept.id)}>{dept.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={departmentPopoverOpen} onOpenChange={setDepartmentPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start gap-2 font-normal">
+                    <Search className="size-4" />
+                    {selectedDepartment ? selectedDepartment.name : "Search or select department"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search departments..." />
+                    <CommandList>
+                      <CommandEmpty>No departments found.</CommandEmpty>
+                      <CommandGroup>
+                        {departments.map((dept) => (
+                          <CommandItem
+                            key={dept.id}
+                            value={dept.name}
+                            onSelect={() => {
+                              setDepartmentId(String(dept.id));
+                              setDepartmentPopoverOpen(false);
+                            }}
+                          >
+                            {dept.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label>Assign to User</Label>
-              <Select value={assignedUserId} onValueChange={setAssignedUserId}>
-                <SelectTrigger className="bg-secondary border-0">
-                  <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.filter((u) => u.is_active).map((user) => (
-                    <SelectItem key={user.id} value={String(user.id)}>
-                      {user.username}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={assignedUserPopoverOpen} onOpenChange={setAssignedUserPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start gap-2 font-normal">
+                    <Search className="size-4" />
+                    {selectedAssignedUser ? selectedAssignedUser.username : "Search or select user"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search users..." />
+                    <CommandList>
+                      <CommandEmpty>No active users found.</CommandEmpty>
+                      <CommandGroup>
+                        {users
+                          .filter((u) => u.is_active)
+                          .map((user) => (
+                            <CommandItem
+                              key={user.id}
+                              value={`${user.username} ${user.email ?? ""}`.trim()}
+                              onSelect={() => {
+                                setAssignedUserId(String(user.id));
+                                setAssignedUserPopoverOpen(false);
+                              }}
+                            >
+                              {user.username}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label>Managed By</Label>
+              <Popover open={managedByPopoverOpen} onOpenChange={setManagedByPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start gap-2 font-normal">
+                    <Search className="size-4" />
+                    {selectedManagedByRole ? selectedManagedByRole.name : "Search or select role"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search roles..." />
+                    <CommandList>
+                      <CommandEmpty>No roles found.</CommandEmpty>
+                      <CommandGroup>
+                        {roles.map((role) => (
+                          <CommandItem
+                            key={role.id}
+                            value={role.name}
+                            onSelect={() => {
+                              setManagedByRoleId(String(role.id));
+                              setManagedByPopoverOpen(false);
+                            }}
+                          >
+                            {role.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </TabsContent>
         </Tabs>

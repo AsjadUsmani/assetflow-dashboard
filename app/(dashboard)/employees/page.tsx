@@ -33,19 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -130,13 +117,11 @@ function isEmployeeRole(roleName: string | null): boolean {
   return (roleName ?? "").trim().toLowerCase() === "employee"
 }
 
-export default function UsersPage() {
+export default function EmployeesPage() {
   const router = useRouter()
   const [users, setUsers] = React.useState<UserRow[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [search, setSearch] = React.useState("")
-  const [roleFilter, setRoleFilter] = React.useState("all")
-  const [rolePopoverOpen, setRolePopoverOpen] = React.useState(false)
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [importDialogOpen, setImportDialogOpen] = React.useState(false)
   const [actionUserId, setActionUserId] = React.useState<number | null>(null)
@@ -164,10 +149,10 @@ export default function UsersPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = "users-sample.csv"
+      a.download = "employees-sample.csv"
       a.click()
       URL.revokeObjectURL(url)
-      toast({ title: "Download started", description: "users-sample.csv" })
+      toast({ title: "Download started", description: "employees-sample.csv" })
     } catch (e) {
       toast({
         variant: "destructive",
@@ -184,14 +169,14 @@ export default function UsersPage() {
         is_active: !user.is_active,
       })
       toast({
-        title: user.is_active ? "User suspended" : "User activated",
+        title: user.is_active ? "Employee suspended" : "Employee activated",
         description: `${user.username} has been ${user.is_active ? "suspended" : "activated"}.`,
       })
       await loadUsers()
     } catch (e) {
       toast({
         variant: "destructive",
-        title: user.is_active ? "Failed to suspend user" : "Failed to activate user",
+        title: user.is_active ? "Failed to suspend employee" : "Failed to activate employee",
         description: e instanceof Error ? e.message : "Unknown error",
       })
     } finally {
@@ -199,36 +184,33 @@ export default function UsersPage() {
     }
   }
 
-  const nonEmployeeUsers = React.useMemo(
-    () => users.filter((user) => !isEmployeeRole(user.role_name)),
+  const employeeUsers = React.useMemo(
+    () => users.filter((user) => isEmployeeRole(user.role_name)),
     [users],
   )
 
-  const filteredUsers = nonEmployeeUsers.filter((user) => {
+  const filteredUsers = employeeUsers.filter((user) => {
     const fullName = user.username || user.email || ""
     const matchesSearch =
       fullName.toLowerCase().includes(search.toLowerCase()) ||
       (user.email ?? "").toLowerCase().includes(search.toLowerCase())
-    const matchesRole =
-      roleFilter === "all" ||
-      (user.role_name ?? "").toLowerCase().replace(" ", "_") === roleFilter
     const status = user.is_active ? "active" : "inactive"
     const matchesStatus = statusFilter === "all" || status === statusFilter
-    return matchesSearch && matchesRole && matchesStatus
+    return matchesSearch && matchesStatus
   })
 
-  const activeUsers = nonEmployeeUsers.filter((u) => u.is_active).length
-  const adminCount = nonEmployeeUsers.filter((u) =>
+  const activeUsers = employeeUsers.filter((u) => u.is_active).length
+  const adminCount = employeeUsers.filter((u) =>
     (u.role_name ?? "").toLowerCase().includes("admin"),
   ).length
   const now = new Date()
-  const activeNowCount = nonEmployeeUsers.filter((u) => {
+  const activeNowCount = employeeUsers.filter((u) => {
     if (!u.last_login) return false
     const lastLogin = new Date(u.last_login)
     if (Number.isNaN(lastLogin.getTime())) return false
     return now.getTime() - lastLogin.getTime() <= 15 * 60 * 1000
   }).length
-  const loginsThisMonth = nonEmployeeUsers.filter((u) => {
+  const loginsThisMonth = employeeUsers.filter((u) => {
     if (!u.last_login) return false
     const lastLogin = new Date(u.last_login)
     if (Number.isNaN(lastLogin.getTime())) return false
@@ -237,28 +219,12 @@ export default function UsersPage() {
       lastLogin.getMonth() === now.getMonth()
     )
   }).length
-  const roleOptions = React.useMemo(() => {
-    const uniq = new Set<string>()
-    for (const user of nonEmployeeUsers) {
-      const roleName = (user.role_name ?? "").trim()
-      if (roleName) uniq.add(roleName)
-    }
-    return Array.from(uniq).sort((a, b) => a.localeCompare(b))
-  }, [nonEmployeeUsers])
-
-  const selectedRoleLabel =
-    roleFilter === "all"
-      ? "All Roles"
-      : roleOptions.find(
-          (roleName) => roleName.toLowerCase().replace(/\s+/g, "_") === roleFilter,
-        ) ?? "Role"
-
   return (
     <>
       <AppHeader
         breadcrumbs={[
           { label: "Home", href: "/dashboard" },
-          { label: "Users" },
+          { label: "Employee" },
         ]}
       />
 
@@ -317,11 +283,11 @@ export default function UsersPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
                   <Users className="size-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{nonEmployeeUsers.length}</div>
+                  <div className="text-2xl font-bold">{employeeUsers.length}</div>
                   <p className="text-xs text-muted-foreground">
                     {activeUsers} currently active
                   </p>
@@ -365,14 +331,14 @@ export default function UsersPage() {
               </Card>
             </div>
 
-            {/* User List */}
+            {/* Employee List */}
             <Card>
               <CardHeader>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <CardTitle>Admin Users</CardTitle>
+                    <CardTitle>Employees</CardTitle>
                     <CardDescription>
-                      {filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""} found
+                      {filteredUsers.length} employee{filteredUsers.length !== 1 ? "s" : ""} found
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
@@ -395,9 +361,9 @@ export default function UsersPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <Button asChild>
-                      <Link href="/users/create">
+                      <Link href="/employees/create">
                         <UserPlus className="mr-2 size-4" />
-                        Add User
+                        Add Employee
                       </Link>
                     </Button>
                   </div>
@@ -407,9 +373,9 @@ export default function UsersPage() {
                 open={importDialogOpen}
                 onOpenChange={setImportDialogOpen}
                 endpoint="/workspace/users/import-csv"
-                title="Import users from CSV"
+                title="Import employees from CSV"
                 description="Upload CSV with columns: Display name, Email Address, Title, Department, City, Country, Office, Block Credentials. Download sample CSV for exact format."
-                sampleFilename="users-sample.csv"
+                sampleFilename="employees-sample.csv"
                 onSuccess={loadUsers}
               />
               <CardContent>
@@ -424,51 +390,6 @@ export default function UsersPage() {
                       className="pl-9"
                     />
                   </div>
-                  <Popover open={rolePopoverOpen} onOpenChange={setRolePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between gap-2 font-normal sm:w-40"
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <Shield className="size-4 shrink-0" />
-                          <span className="truncate">{selectedRoleLabel}</span>
-                        </div>
-                        <ChevronDown className="size-4 shrink-0" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-60 p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search roles..." />
-                        <CommandList>
-                          <CommandEmpty>No roles found.</CommandEmpty>
-                          <CommandGroup>
-                            <CommandItem
-                              value="All Roles"
-                              onSelect={() => {
-                                setRoleFilter("all")
-                                setRolePopoverOpen(false)
-                              }}
-                            >
-                              All Roles
-                            </CommandItem>
-                            {roleOptions.map((roleName) => (
-                              <CommandItem
-                                key={roleName}
-                                value={roleName}
-                                onSelect={() => {
-                                  setRoleFilter(roleName.toLowerCase().replace(/\s+/g, "_"))
-                                  setRolePopoverOpen(false)
-                                }}
-                              >
-                                {roleName}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-full sm:w-37.5">
                       <SelectValue placeholder="Status" />
@@ -487,7 +408,7 @@ export default function UsersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>User</TableHead>
+                        <TableHead>Employee</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Last Login</TableHead>
@@ -553,7 +474,7 @@ export default function UsersPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => router.push(`/users/${user.id}`)}
+                              onClick={() => router.push(`/employees/${user.id}`)}
                             >
                               <Eye className="mr-2 size-4" />
                               View Details
@@ -561,7 +482,7 @@ export default function UsersPage() {
                             <DropdownMenuItem asChild>
                               <Link href={`/users/${user.id}/edit`}>
                                 <Edit className="mr-2 size-4" />
-                                Edit User
+                                Edit Employee
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem>
@@ -584,8 +505,8 @@ export default function UsersPage() {
                               {actionUserId === user.id
                                 ? "Updating..."
                                 : user.is_active
-                                  ? "Suspend User"
-                                  : "Activate User"}
+                                  ? "Suspend Employee"
+                                  : "Activate Employee"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

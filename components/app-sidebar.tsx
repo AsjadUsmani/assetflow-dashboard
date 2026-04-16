@@ -162,6 +162,39 @@ export function AppSidebar() {
   const [menuGroups, setMenuGroups] = React.useState<WorkspaceMenuGroup[]>([]);
   const [menusError, setMenusError] = React.useState<string | null>(null);
 
+  const menuGroupsWithEmployees = React.useMemo(() => {
+    return menuGroups.map(group => {
+      const hasUsersMenu = group.menus.some(item => item.path === '/users');
+      const hasEmployeesMenu = group.menus.some(item => item.path === '/employees');
+
+      if (!hasUsersMenu || hasEmployeesMenu) {
+        return group;
+      }
+
+      const employeeMenu: WorkspaceMenu = {
+        id: -1001,
+        path: '/employees',
+        label: 'Employee',
+        icon: 'Users',
+        sort_order: 0,
+        children: [],
+      };
+
+      const menusWithEmployee: WorkspaceMenu[] = [];
+      for (const item of group.menus) {
+        if (item.path === '/users') {
+          menusWithEmployee.push(employeeMenu);
+        }
+        menusWithEmployee.push(item);
+      }
+
+      return {
+        ...group,
+        menus: menusWithEmployee,
+      };
+    });
+  }, [menuGroups]);
+
   React.useEffect(() => {
     let cancelled = false;
     getWorkspaceMenus()
@@ -215,7 +248,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {menuGroups.map((group) => (
+        {menuGroupsWithEmployees.map((group) => (
           <React.Fragment key={group.id}>
             <SidebarGroup>
               <SidebarGroupLabel>{group.name}</SidebarGroupLabel>
