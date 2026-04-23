@@ -530,53 +530,53 @@ export function AssetTypesList() {
 
   return (
     <>
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {items.map((assetType) => (
-        <Card key={assetType.id} className="bg-card border-border group">
-          <CardHeader className="flex flex-row items-start justify-between pb-2">
-            <div className="flex-1">
-              <CardTitle className="text-base font-medium text-foreground">
-                {assetType.name}
-              </CardTitle>
-              {/*
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((assetType) => (
+          <Card key={assetType.id} className="bg-card border-border group">
+            <CardHeader className="flex flex-row items-start justify-between pb-2">
+              <div className="flex-1">
+                <CardTitle className="text-base font-medium text-foreground">
+                  {assetType.name}
+                </CardTitle>
+                {/*
               <p className="text-sm text-muted-foreground mt-1">
                 {assetType.description}
               </p>
               */}
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <MoreHorizontal className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setViewing(assetType)}>
-                  <Eye className="mr-2 size-4" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setEditingId(assetType.id)}>
-                  <Pencil className="mr-2 size-4" />
-                  Edit Type
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled={actionId === assetType.id} onClick={() => handleDuplicate(assetType.id)}>
-                  <Copy className="mr-2 size-4" />
-                  Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={actionId === assetType.id} className="text-destructive" onClick={() => handleDelete(assetType.id)}>
-                  <Trash2 className="mr-2 size-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/*
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setViewing(assetType)}>
+                    <Eye className="mr-2 size-4" />
+                    View Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setEditingId(assetType.id)}>
+                    <Pencil className="mr-2 size-4" />
+                    Edit Type
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={actionId === assetType.id} onClick={() => handleDuplicate(assetType.id)}>
+                    <Copy className="mr-2 size-4" />
+                    Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem disabled={actionId === assetType.id} className="text-destructive" onClick={() => handleDelete(assetType.id)}>
+                    <Trash2 className="mr-2 size-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/*
             <div className="flex flex-wrap gap-2">
               {behaviorFlags.map((flag) => {
                 const isEnabled = false; // behavior flags not yet stored in backend
@@ -600,7 +600,7 @@ export function AssetTypesList() {
             </div>
             */}
 
-            {/*
+              {/*
             <div className="border-t border-border pt-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Properties</span>
@@ -632,35 +632,35 @@ export function AssetTypesList() {
             </div>
             */}
 
-            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border">
-              <span>
-                Created{" "}
-                {new Date(assetType.created_at).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
-              <Button variant="ghost" size="sm" className="h-auto py-1 text-primary" asChild>
-                <Link href={`/assets?assetType=${assetType.id}`}>
-                  View assets
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-    {viewing && (
-      <ViewDetailsDialog assetType={viewing} onClose={() => setViewing(null)} />
-    )}
-    {editingId !== null && (
-      <EditAssetTypeDialog
-        assetTypeId={editingId}
-        onClose={() => setEditingId(null)}
-        onSaved={loadList}
-      />
-    )}
+              <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border">
+                <span>
+                  Created{" "}
+                  {new Date(assetType.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+                <Button variant="ghost" size="sm" className="h-auto py-1 text-primary" asChild>
+                  <Link href={`/assets?assetType=${assetType.id}`}>
+                    View assets
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {viewing && (
+        <ViewDetailsDialog assetType={viewing} onClose={() => setViewing(null)} />
+      )}
+      {editingId !== null && (
+        <EditAssetTypeDialog
+          assetTypeId={editingId}
+          onClose={() => setEditingId(null)}
+          onSaved={loadList}
+        />
+      )}
     </>
   );
 }
