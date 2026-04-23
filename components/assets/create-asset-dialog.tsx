@@ -37,15 +37,16 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Textarea } from "@/components/ui/textarea";
 import { getAssetTypes } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
-import { getWorkspaceRoles, getWorkspaceUsers } from "@/lib/services/workspace-users";
+import { getWorkspaceUsers } from "@/lib/services/workspace-users";
 import { createAsset, type CreateAssetBody } from "@/lib/services/assets";
 import type { AssetType } from "@/lib/services/asset-types";
 import type { Location } from "@/lib/services/locations";
 import type { Department } from "@/lib/services/departments";
-import type { WorkspaceUser, Role } from "@/lib/services/workspace-users";
+import type { WorkspaceUser } from "@/lib/services/workspace-users";
 
 export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [open, setOpen] = useState(false);
@@ -53,21 +54,27 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedTypeId, setSelectedTypeId] = useState("");
   const [name, setName] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
+  const [assetTag, setAssetTag] = useState("");
+  const [cost, setCost] = useState("");
+  const [domain, setDomain] = useState("");
   const [status, setStatus] = useState("available");
   const [locationId, setLocationId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [assignedUserId, setAssignedUserId] = useState("");
+  const [managedByUserId, setManagedByUserId] = useState("");
+  const [assignedDate, setAssignedDate] = useState("");
+  const [usageType, setUsageType] = useState("");
+  const [impact, setImpact] = useState("");
+  const [remark, setRemark] = useState("");
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
   const [departmentPopoverOpen, setDepartmentPopoverOpen] = useState(false);
   const [assignedUserPopoverOpen, setAssignedUserPopoverOpen] = useState(false);
-  const [managedByRoleId, setManagedByRoleId] = useState("");
   const [managedByPopoverOpen, setManagedByPopoverOpen] = useState(false);
   const [purchaseDate, setPurchaseDate] = useState("");
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
@@ -80,7 +87,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const selectedLocation = locations.find((loc) => String(loc.id) === locationId);
   const selectedDepartment = departments.find((dept) => String(dept.id) === departmentId);
   const selectedAssignedUser = users.find((user) => String(user.id) === assignedUserId);
-  const selectedManagedByRole = roles.find((role) => String(role.id) === managedByRoleId);
+  const selectedManagedByUser = users.find((user) => String(user.id) === managedByUserId);
 
   const getPropertyDefaultValue = (prop: AssetType["properties"][number]): string | number | boolean | undefined => {
     const dataType = prop.data_type ?? "text";
@@ -122,13 +129,12 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   useEffect(() => {
     if (open) {
       setLoading(true);
-      Promise.all([getAssetTypes(), getLocations(), getDepartments(), getWorkspaceUsers(), getWorkspaceRoles()])
-        .then(([types, locs, depts, usrs, rls]) => {
+      Promise.all([getAssetTypes(), getLocations(), getDepartments(), getWorkspaceUsers()])
+        .then(([types, locs, depts, usrs]) => {
           setAssetTypes(types);
           setLocations(locs);
           setDepartments(depts);
           setUsers(usrs);
-          setRoles(rls.filter((r) => r.name && r.name.trim().length > 0));
         })
         .catch((err) => {
           setError(err instanceof Error ? err.message : "Failed to load data");
@@ -140,6 +146,9 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setSelectedTypeId("");
       setName("");
       setSerialNumber("");
+      setAssetTag("");
+      setCost("");
+      setDomain("");
       setStatus("available");
       setLocationId("");
       setDepartmentId("");
@@ -147,8 +156,12 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setLocationPopoverOpen(false);
       setDepartmentPopoverOpen(false);
       setAssignedUserPopoverOpen(false);
-      setManagedByRoleId("");
+      setManagedByUserId("");
       setManagedByPopoverOpen(false);
+      setAssignedDate("");
+      setUsageType("");
+      setImpact("");
+      setRemark("");
       setPurchaseDate("");
       setWarrantyEndDate("");
       setExpiryDate("");
@@ -211,14 +224,21 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         asset_type_id: Number(selectedTypeId),
         name: name.trim(),
         serial_number: serialNumber.trim() || undefined,
+        asset_tag: assetTag.trim() || undefined,
+        cost: cost ? parseFloat(cost) : undefined,
+        domain: domain.trim() || undefined,
         status,
         location_id: locationId ? Number(locationId) : undefined,
         department_id: departmentId ? Number(departmentId) : undefined,
         assigned_to_user_id: assignedUserId ? Number(assignedUserId) : undefined,
-        managed_by_role_id: managedByRoleId ? Number(managedByRoleId) : undefined,
+        managed_by_user_id: managedByUserId ? Number(managedByUserId) : undefined,
         purchase_date: purchaseDate || undefined,
         warranty_end_date: warrantyEndDate || undefined,
         expiry_date: expiryDate || undefined,
+        assigned_date: assignedDate || undefined,
+        usage_type: usageType || undefined,
+        impact: impact || undefined,
+        remark: remark.trim() || undefined,
         property_values: Object.keys(pv).length > 0 ? pv : undefined,
       };
       await createAsset(body);
@@ -294,6 +314,20 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
             <div className="space-y-2">
               <Label htmlFor="serialNumber">Serial Number</Label>
               <Input id="serialNumber" placeholder="Serial number" className="bg-secondary border-0" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assetTag">Asset Tag</Label>
+              <Input id="assetTag" placeholder="Asset tag/barcode" className="bg-secondary border-0" value={assetTag} onChange={(e) => setAssetTag(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cost">Cost</Label>
+                <Input id="cost" type="number" placeholder="0.00" step="0.01" className="bg-secondary border-0" value={cost} onChange={(e) => setCost(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="domain">Domain</Label>
+                <Input id="domain" placeholder="Domain" className="bg-secondary border-0" value={domain} onChange={(e) => setDomain(e.target.value)} />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
@@ -414,7 +448,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
 
           <TabsContent value="assignment" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label>Location</Label>
+              <Label>Location/Office</Label>
               <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start gap-2 font-normal">
@@ -480,7 +514,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
               </Popover>
             </div>
             <div className="space-y-2">
-              <Label>Assign to User</Label>
+              <Label>Assigned To</Label>
               <Popover open={assignedUserPopoverOpen} onOpenChange={setAssignedUserPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start gap-2 font-normal">
@@ -520,32 +554,69 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start gap-2 font-normal">
                     <Search className="size-4" />
-                    {selectedManagedByRole ? selectedManagedByRole.name : "Search or select role"}
+                    {selectedManagedByUser ? selectedManagedByUser.username : "Search or select user"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search roles..." />
+                    <CommandInput placeholder="Search users..." />
                     <CommandList>
-                      <CommandEmpty>No roles found.</CommandEmpty>
+                      <CommandEmpty>No active users found.</CommandEmpty>
                       <CommandGroup>
-                        {roles.map((role) => (
-                          <CommandItem
-                            key={role.id}
-                            value={role.name}
-                            onSelect={() => {
-                              setManagedByRoleId(String(role.id));
-                              setManagedByPopoverOpen(false);
-                            }}
-                          >
-                            {role.name}
-                          </CommandItem>
-                        ))}
+                        {users
+                          .filter((u) => u.is_active)
+                          .map((user) => (
+                            <CommandItem
+                              key={user.id}
+                              value={`${user.username} ${user.email ?? ""}`.trim()}
+                              onSelect={() => {
+                                setManagedByUserId(String(user.id));
+                                setManagedByPopoverOpen(false);
+                              }}
+                            >
+                              {user.username}
+                            </CommandItem>
+                          ))}
                       </CommandGroup>
                     </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assignedDate">Assigned Date</Label>
+              <Input id="assignedDate" type="date" className="bg-secondary border-0" value={assignedDate} onChange={(e) => setAssignedDate(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="usageType">Usage Type</Label>
+                <Select value={usageType} onValueChange={setUsageType}>
+                  <SelectTrigger className="bg-secondary border-0">
+                    <SelectValue placeholder="Select usage type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Permanent">Permanent</SelectItem>
+                    <SelectItem value="Loaner">Loaner</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="impact">Impact</Label>
+                <Select value={impact} onValueChange={setImpact}>
+                  <SelectTrigger className="bg-secondary border-0">
+                    <SelectValue placeholder="Select impact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="remark">Remark</Label>
+              <Textarea id="remark" placeholder="Additional remarks..." className="bg-secondary border-0 resize-none" value={remark} onChange={(e) => setRemark(e.target.value)} />
             </div>
           </TabsContent>
         </Tabs>

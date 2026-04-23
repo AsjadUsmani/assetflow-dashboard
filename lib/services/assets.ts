@@ -6,6 +6,9 @@ export type Asset = {
   asset_type_name: string
   name: string
   serial_number: string | null
+  asset_tag: string | null
+  cost: number | null
+  domain: string | null
   status: string
   location_id: number | null
   location_name: string | null
@@ -13,13 +16,17 @@ export type Asset = {
   department_name: string | null
   assigned_to_user_id: number | null
   assigned_to_name: string | null
-  managed_by_role_id: number | null
-  managed_by_role_name: string | null
+  managed_by_user_id: number | null
+  managed_by_user_name: string | null
   created_by_user_id: number | null
   created_by_name: string | null
   purchase_date: string | null
   warranty_end_date: string | null
   expiry_date: string | null
+  assigned_date: string | null
+  usage_type: string | null
+  impact: string | null
+  remark: string | null
   property_values: Record<string, unknown> | null
   created_at: string
   updated_at: string
@@ -36,14 +43,21 @@ export type CreateAssetBody = {
   asset_type_id: number
   name: string
   serial_number?: string
+  asset_tag?: string
+  cost?: number
+  domain?: string
   status?: string
   location_id?: number
   department_id?: number
   assigned_to_user_id?: number
-  managed_by_role_id?: number
+  managed_by_user_id?: number
   purchase_date?: string
   warranty_end_date?: string
   expiry_date?: string
+  assigned_date?: string
+  usage_type?: string
+  impact?: string
+  remark?: string
   property_values?: Record<string, unknown>
 }
 
