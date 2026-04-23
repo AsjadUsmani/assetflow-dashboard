@@ -27,7 +27,7 @@ export default function AssetTypesPage() {
               Asset Types
             </h1>
             <p className="text-muted-foreground">
-              Configure asset categories and their behavior flags
+              Configure asset categories
             </p>
           </div>
           <AssetTypeDialog onSuccess={handleAssetTypeCreated} />

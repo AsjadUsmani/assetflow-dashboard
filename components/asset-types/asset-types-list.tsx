@@ -220,26 +220,29 @@ function EditAssetTypeDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Asset Type</DialogTitle>
-          <DialogDescription>Update name, code, description, and properties.</DialogDescription>
+          <DialogDescription>Update asset type name.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Tabs defaultValue="general" className="mt-2">
-            <TabsList className="grid w-full grid-cols-3">
+            {/* <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="behavior">Behavior</TabsTrigger>
               <TabsTrigger value="properties">Properties</TabsTrigger>
-            </TabsList>
+            </TabsList> */}
             <TabsContent value="general" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Name</Label>
+                <Label htmlFor="edit-name">Type Name</Label>
                 <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
+              {/*
               <div className="space-y-2">
                 <Label htmlFor="edit-desc">Description</Label>
                 <Textarea id="edit-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
               </div>
+              */}
             </TabsContent>
+            {/*
             <TabsContent value="behavior" className="space-y-4 mt-4">
               <p className="text-sm text-muted-foreground">
                 Configure how assets of this type behave in the system.
@@ -282,6 +285,8 @@ function EditAssetTypeDialog({
                 </div>
               </div>
             </TabsContent>
+            */}
+            {/*
             <TabsContent value="properties" className="space-y-4 mt-4">
               <p className="text-sm text-muted-foreground">
                 Search or add existing properties, or create new ones.
@@ -385,6 +390,7 @@ function EditAssetTypeDialog({
                 </div>
               )}
             </TabsContent>
+            */}
           </Tabs>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
@@ -396,6 +402,7 @@ function EditAssetTypeDialog({
   );
 }
 
+/*
 const behaviorFlags = [
   { key: "hasExpiry", label: "Has Expiry", icon: Calendar },
   { key: "isRechargeable", label: "Rechargeable", icon: Zap },
@@ -403,6 +410,7 @@ const behaviorFlags = [
   { key: "isMovable", label: "Movable", icon: ArrowLeftRight },
   { key: "requiresAssignment", label: "Requires Assignment", icon: UserCheck },
 ] as const;
+*/
 
 function ViewDetailsDialog({
   assetType,
@@ -421,16 +429,19 @@ function ViewDetailsDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {/*
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Code</p>
             <p className="text-sm text-foreground mt-0.5">{assetType.code}</p>
           </div>
-          {assetType.description && (
+          */}
+          {/* {assetType.description && (
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Description</p>
               <p className="text-sm text-foreground mt-0.5">{assetType.description}</p>
             </div>
-          )}
+          )} */}
+          {/*
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Properties</p>
             <div className="mt-2 flex flex-wrap gap-1">
@@ -445,6 +456,7 @@ function ViewDetailsDialog({
               )}
             </div>
           </div>
+          */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Created</p>
             <p className="text-sm text-foreground mt-0.5">
@@ -526,9 +538,11 @@ export function AssetTypesList() {
               <CardTitle className="text-base font-medium text-foreground">
                 {assetType.name}
               </CardTitle>
+              {/*
               <p className="text-sm text-muted-foreground mt-1">
                 {assetType.description}
               </p>
+              */}
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -562,6 +576,7 @@ export function AssetTypesList() {
             </DropdownMenu>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/*
             <div className="flex flex-wrap gap-2">
               {behaviorFlags.map((flag) => {
                 const isEnabled = false; // behavior flags not yet stored in backend
@@ -583,7 +598,9 @@ export function AssetTypesList() {
                 );
               })}
             </div>
+            */}
 
+            {/*
             <div className="border-t border-border pt-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Properties</span>
@@ -613,6 +630,7 @@ export function AssetTypesList() {
                 </div>
               )}
             </div>
+            */}
 
             <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border">
               <span>
