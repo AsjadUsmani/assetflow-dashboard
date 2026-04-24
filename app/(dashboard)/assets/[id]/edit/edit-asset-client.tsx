@@ -285,7 +285,7 @@ export function EditAssetClient() {
                 <Input id="edit-serial" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} className="bg-secondary border-0" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-processor">Processor / CPU (temporary)</Label>
+                <Label htmlFor="edit-processor">Processor / CPU</Label>
                 <Input
                   id="edit-processor"
                   value={processor}
@@ -434,7 +434,7 @@ export function EditAssetClient() {
                   <SelectContent>
                     {users.filter((u) => u.is_active).map((user) => (
                       <SelectItem key={user.id} value={String(user.id)}>
-                        {[user.first_name, user.last_name].filter(Boolean).join(" ") || user.username}
+                        {user.username}
                       </SelectItem>
                     ))}
                   </SelectContent>

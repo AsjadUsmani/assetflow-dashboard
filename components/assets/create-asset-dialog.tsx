@@ -323,7 +323,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="processor">Processor / CPU (temporary)</Label>
+              <Label htmlFor="processor">Processor / CPU </Label>
               <Input
                 id="processor"
                 placeholder="e.g., Intel i7 / Apple M2"
