@@ -72,6 +72,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [usageType, setUsageType] = useState("");
   const [impact, setImpact] = useState("");
   const [remark, setRemark] = useState("");
+  const [processor, setProcessor] = useState("");
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
   const [departmentPopoverOpen, setDepartmentPopoverOpen] = useState(false);
   const [assignedUserPopoverOpen, setAssignedUserPopoverOpen] = useState(false);
@@ -162,6 +163,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setUsageType("");
       setImpact("");
       setRemark("");
+      setProcessor("");
       setPurchaseDate("");
       setWarrantyEndDate("");
       setExpiryDate("");
@@ -198,21 +200,8 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const handleSubmit = async () => {
     if (!selectedTypeId || !name.trim()) return;
 
-    // Validate required properties
-    const requiredProps = assetType?.properties?.filter((p) => p.is_required) ?? [];
-    const errors: Record<string, boolean> = {};
-    for (const prop of requiredProps) {
-      const val = propertyValues[prop.name];
-      if (val === undefined || val === "" || val === null) {
-        errors[prop.name] = true;
-      }
-    }
-    setPropertyErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      setError(`Please fill in all required properties: ${requiredProps.filter((p) => errors[p.name]).map((p) => p.name).join(", ")}`);
-      return;
-    }
-
+    // Temporary behavior: allow create without blocking on dynamic property requirements.
+    setPropertyErrors({});
     setError(null);
     setLoading(true);
     try {
@@ -220,6 +209,10 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       Object.entries(propertyValues).forEach(([k, v]) => {
         if (v !== "" && v !== undefined) pv[k] = v;
       });
+      if (processor.trim()) {
+        pv["Processor / CPU"] = processor.trim();
+        pv["processor"] = processor.trim();
+      }
       const body: CreateAssetBody = {
         asset_type_id: Number(selectedTypeId),
         name: name.trim(),
@@ -328,6 +321,16 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                 <Label htmlFor="domain">Domain</Label>
                 <Input id="domain" placeholder="Domain" className="bg-secondary border-0" value={domain} onChange={(e) => setDomain(e.target.value)} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="processor">Processor / CPU (temporary)</Label>
+              <Input
+                id="processor"
+                placeholder="e.g., Intel i7 / Apple M2"
+                className="bg-secondary border-0"
+                value={processor}
+                onChange={(e) => setProcessor(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>

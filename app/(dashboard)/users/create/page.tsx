@@ -42,11 +42,11 @@ import { getDepartments, type Department } from "@/lib/services/departments"
 import {
   getWorkspaceRoles,
   getWorkspaceUserMeta,
-  type CountryOption,
   type UserOfficeOption,
 } from "@/lib/services/workspace-users"
 
 type Role = { id: number; name: string }
+const HARDCODED_COUNTRY_NAME = "India"
 
 export default function AddUserPage() {
   const router = useRouter()
@@ -54,7 +54,6 @@ export default function AddUserPage() {
   const [isLoading, setIsLoading] = React.useState(false)
   const [roles, setRoles] = React.useState<Role[]>([])
   const [departments, setDepartments] = React.useState<Department[]>([])
-  const [countryOptions, setCountryOptions] = React.useState<CountryOption[]>([])
   const [officeOptions, setOfficeOptions] = React.useState<UserOfficeOption[]>([])
 
   const [username, setUsername] = React.useState("")
@@ -64,8 +63,6 @@ export default function AddUserPage() {
   const [rolePopoverOpen, setRolePopoverOpen] = React.useState(false)
   const [departmentId, setDepartmentId] = React.useState("")
   const [departmentPopoverOpen, setDepartmentPopoverOpen] = React.useState(false)
-  const [countryId, setCountryId] = React.useState("")
-  const [countryPopoverOpen, setCountryPopoverOpen] = React.useState(false)
   const [city, setCity] = React.useState("")
   const [title, setTitle] = React.useState("")
   const [office, setOffice] = React.useState("")
@@ -79,12 +76,10 @@ export default function AddUserPage() {
     hasValidEmail &&
     hasMinPasswordLength &&
     Boolean(roleId) &&
-    Boolean(countryId) &&
     Boolean(office)
 
   const selectedRole = roles.find((r) => String(r.id) === roleId)
   const selectedDepartment = departments.find((d) => String(d.id) === departmentId)
-  const selectedCountry = countryOptions.find((c) => String(c.id) === countryId)
 
   React.useEffect(() => {
   const controller = new AbortController()
@@ -101,14 +96,12 @@ export default function AddUserPage() {
 
       setRoles(roles)
       setDepartments(depts)
-      setCountryOptions(meta.country_options ?? [])
       setOfficeOptions(meta.office_options ?? [])
     } catch {
       if (controller.signal.aborted) return
 
       setRoles([])
       setDepartments([])
-      setCountryOptions([])
       setOfficeOptions([])
     }
   }
@@ -128,7 +121,7 @@ export default function AddUserPage() {
         password: password.trim(),
         role_id: Number(roleId),
         department_id: Number(departmentId) || null,
-        country_id: Number(countryId),
+        country_name: HARDCODED_COUNTRY_NAME,
         city: city.trim() || null,
         title: title.trim() || null,
         office,
@@ -297,36 +290,7 @@ export default function AddUserPage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="country">Country or Region *</Label>
-                      <Popover open={countryPopoverOpen} onOpenChange={setCountryPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start gap-2 font-normal">
-                            <Search className="size-4" />
-                            {selectedCountry ? selectedCountry.name : "Search or select country"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-75 p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search countries..." />
-                            <CommandList>
-                              <CommandEmpty>No countries found.</CommandEmpty>
-                              <CommandGroup>
-                                {countryOptions.map((country) => (
-                                  <CommandItem
-                                    key={country.id}
-                                    value={country.name}
-                                    onSelect={() => {
-                                      setCountryId(String(country.id))
-                                      setCountryPopoverOpen(false)
-                                    }}
-                                  >
-                                    {country.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      <Input id="country" value={HARDCODED_COUNTRY_NAME} disabled readOnly />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="office">Office *</Label>

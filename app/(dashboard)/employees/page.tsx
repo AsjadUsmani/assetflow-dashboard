@@ -49,8 +49,6 @@ import {
   Key,
   Ban,
   Mail,
-  Calendar,
-  Activity,
   FileDown,
   Upload,
   ChevronDown,
@@ -203,22 +201,6 @@ export default function EmployeesPage() {
   const adminCount = employeeUsers.filter((u) =>
     (u.role_name ?? "").toLowerCase().includes("admin"),
   ).length
-  const now = new Date()
-  const activeNowCount = employeeUsers.filter((u) => {
-    if (!u.last_login) return false
-    const lastLogin = new Date(u.last_login)
-    if (Number.isNaN(lastLogin.getTime())) return false
-    return now.getTime() - lastLogin.getTime() <= 15 * 60 * 1000
-  }).length
-  const loginsThisMonth = employeeUsers.filter((u) => {
-    if (!u.last_login) return false
-    const lastLogin = new Date(u.last_login)
-    if (Number.isNaN(lastLogin.getTime())) return false
-    return (
-      lastLogin.getFullYear() === now.getFullYear() &&
-      lastLogin.getMonth() === now.getMonth()
-    )
-  }).length
   return (
     <>
       <AppHeader
@@ -231,7 +213,7 @@ export default function EmployeesPage() {
       <div className="flex flex-1 flex-col gap-6 p-6">
         {isLoading ? (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
               {Array.from({ length: 4 }).map((_, index) => (
                 <Card key={index}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -302,30 +284,6 @@ export default function EmployeesPage() {
                   <div className="text-2xl font-bold">{adminCount}</div>
                   <p className="text-xs text-muted-foreground">
                     With elevated permissions
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Active Now</CardTitle>
-                  <Activity className="size-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{activeNowCount}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Last 15 minutes
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Logins This Month</CardTitle>
-                  <Calendar className="size-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{loginsThisMonth}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Based on last login
                   </p>
                 </CardContent>
               </Card>
@@ -411,7 +369,6 @@ export default function EmployeesPage() {
                         <TableHead>Employee</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Last Login</TableHead>
                         <TableHead className="w-12.5" />
                       </TableRow>
                     </TableHeader>
@@ -459,11 +416,6 @@ export default function EmployeesPage() {
                         <Badge variant="secondary" className={status.color}>
                           {status.label}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {user.last_login
-                          ? new Date(user.last_login).toLocaleString()
-                          : "—"}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>

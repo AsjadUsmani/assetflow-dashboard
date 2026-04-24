@@ -20,6 +20,8 @@ export type Asset = {
   managed_by_user_name: string | null
   created_by_user_id: number | null
   created_by_name: string | null
+  updated_by_user_id: number | null
+  updated_by_name: string | null
   purchase_date: string | null
   warranty_end_date: string | null
   expiry_date: string | null

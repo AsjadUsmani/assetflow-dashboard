@@ -40,7 +40,8 @@ export function EditAssetClient() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get("tab") ?? "basic";
+  const requestedTab = searchParams.get("tab");
+  const defaultTab = requestedTab === "assignment" ? "assignment" : "basic";
   const id = typeof params?.id === "string" ? Number(params.id) : NaN;
   const [asset, setAsset] = useState<Asset | null>(null);
   const [assetType, setAssetType] = useState<AssetType | null>(null);
@@ -61,6 +62,7 @@ export function EditAssetClient() {
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [propertyValues, setPropertyValues] = useState<Record<string, string | number | boolean>>({});
+  const [processor, setProcessor] = useState("");
   const [currentTab, setCurrentTab] = useState(defaultTab);
 
   const requiredProperties = useMemo(
@@ -127,6 +129,15 @@ export function EditAssetClient() {
           });
         }
         setPropertyValues(Object.keys(normalizedByName).length > 0 ? normalizedByName : pv);
+        setProcessor(
+          String(
+            normalizedByName["Processor / CPU"] ??
+              normalizedByName["processor"] ??
+              pv["Processor / CPU"] ??
+              pv["processor"] ??
+              "",
+          ),
+        );
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -161,7 +172,9 @@ export function EditAssetClient() {
       return;
     }
     setError(null);
-    setCurrentTab("properties");
+    // Temporary: skipping Properties tab
+    // setCurrentTab("properties");
+    setCurrentTab("assignment");
   };
 
   const handleContinueFromProperties = () => {
@@ -173,10 +186,11 @@ export function EditAssetClient() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!asset) return;
-    if (!validateRequiredProperties()) {
-      setCurrentTab("properties");
-      return;
-    }
+    // Properties step is temporarily disabled.
+    // if (!validateRequiredProperties()) {
+    //   setCurrentTab("properties");
+    //   return;
+    // }
     setError(null);
     setSaving(true);
     try {
@@ -184,6 +198,10 @@ export function EditAssetClient() {
       Object.entries(propertyValues).forEach(([k, v]) => {
         if (v !== "" && v !== undefined) pv[k] = v;
       });
+      if (processor.trim()) {
+        pv["Processor / CPU"] = processor.trim();
+        pv["processor"] = processor.trim();
+      }
       const body: UpdateAssetBody = {
         name: name.trim(),
         serial_number: serialNumber.trim() || null,
@@ -244,13 +262,20 @@ export function EditAssetClient() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
+            {/* Original:
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="properties">Properties</TabsTrigger>
               <TabsTrigger value="assignment">Assignment</TabsTrigger>
             </TabsList>
+            */}
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsTrigger value="assignment">Assignment</TabsTrigger>
+            </TabsList>
             <TabsContent value="basic" className="space-y-4 mt-4">
               <p className="text-sm text-muted-foreground">Type: {asset.asset_type_name}</p>
+              <p className="text-sm text-muted-foreground">Created at: {toDateInputValue(asset.created_at) || "-"}</p>
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Asset Name *</Label>
                 <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} required className="bg-secondary border-0" />
@@ -258,6 +283,15 @@ export function EditAssetClient() {
               <div className="space-y-2">
                 <Label htmlFor="edit-serial">Serial Number</Label>
                 <Input id="edit-serial" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} className="bg-secondary border-0" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-processor">Processor / CPU (temporary)</Label>
+                <Input
+                  id="edit-processor"
+                  value={processor}
+                  onChange={(e) => setProcessor(e.target.value)}
+                  className="bg-secondary border-0"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
@@ -291,7 +325,7 @@ export function EditAssetClient() {
                 )}
               </div>
             </TabsContent>
-            <TabsContent value="properties" className="space-y-4 mt-4">
+            {/* <TabsContent value="properties" className="space-y-4 mt-4">
               {assetType?.properties?.length ? (
                 <div className="space-y-4">
                   {assetType.properties.map((prop) => {
@@ -363,7 +397,7 @@ export function EditAssetClient() {
               ) : (
                 <p className="text-sm text-muted-foreground">No properties for this asset type.</p>
               )}
-            </TabsContent>
+            </TabsContent> */}
             <TabsContent value="assignment" className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label>Location</Label>
@@ -414,11 +448,13 @@ export function EditAssetClient() {
                 Continue
               </Button>
             )}
+            {/* Original:
             {currentTab === "properties" && (
               <Button type="button" onClick={handleContinueFromProperties} disabled={!canContinueFromProperties}>
                 Continue
               </Button>
             )}
+            */}
             {currentTab === "assignment" && (
               <Button type="submit" disabled={saving}>
                 {saving ? "Saving..." : "Save changes"}

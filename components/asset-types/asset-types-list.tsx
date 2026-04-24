@@ -429,19 +429,16 @@ function ViewDetailsDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          {/*
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Code</p>
             <p className="text-sm text-foreground mt-0.5">{assetType.code}</p>
           </div>
-          */}
-          {/* {assetType.description && (
+          {assetType.description && (
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Description</p>
               <p className="text-sm text-foreground mt-0.5">{assetType.description}</p>
             </div>
-          )} */}
-          {/*
+          )}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Properties</p>
             <div className="mt-2 flex flex-wrap gap-1">
@@ -456,7 +453,6 @@ function ViewDetailsDialog({
               )}
             </div>
           </div>
-          */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Created</p>
             <p className="text-sm text-foreground mt-0.5">
@@ -538,11 +534,9 @@ export function AssetTypesList() {
                 <CardTitle className="text-base font-medium text-foreground">
                   {assetType.name}
                 </CardTitle>
-                {/*
-              <p className="text-sm text-muted-foreground mt-1">
-                {assetType.description}
-              </p>
-              */}
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  {assetType.description || "No description"}
+                </p>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -600,37 +594,16 @@ export function AssetTypesList() {
             </div>
             */}
 
-              {/*
-            <div className="border-t border-border pt-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Properties</span>
-                <span className="font-medium text-foreground">
-                  {assetType.properties.length}
-                </span>
-              </div>
-              {assetType.properties.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {assetType.properties.slice(0, 4).map((prop) => (
-                    <Badge
-                      key={prop.id}
-                      variant="secondary"
-                      className="text-xs bg-secondary text-muted-foreground"
-                    >
-                      {prop.name}
-                    </Badge>
-                  ))}
-                  {assetType.properties.length > 4 && (
-                    <Badge
-                      variant="secondary"
-                      className="text-xs bg-secondary text-muted-foreground"
-                    >
-                      +{assetType.properties.length - 4} more
-                    </Badge>
-                  )}
+              <div className="border-t border-border pt-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Code</span>
+                  <span className="font-medium text-foreground">{assetType.code}</span>
                 </div>
-              )}
-            </div>
-            */}
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Properties</span>
+                  <span className="font-medium text-foreground">{assetType.properties.length}</span>
+                </div>
+              </div>
 
               <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border">
                 <span>

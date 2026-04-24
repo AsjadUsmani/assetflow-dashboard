@@ -137,6 +137,10 @@ export function AssetDetailClient() {
                     <p className="text-sm text-muted-foreground">Serial Number</p>
                     <p className="font-medium text-foreground">{asset.serial_number ?? "-"}</p>
                   </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Created At</p>
+                    <p className="font-medium text-foreground">{formatDate(asset.created_at)}</p>
+                  </div>
                 </div>
                 {asset.property_values && Object.keys(asset.property_values).length > 0 && (
                   <>
@@ -174,6 +178,14 @@ export function AssetDetailClient() {
                 <div className="flex items-center gap-2 text-sm">
                   <User className="size-4 text-muted-foreground" />
                   <span className="text-foreground">{asset.assigned_to_name ?? "Unassigned"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="size-4 text-muted-foreground" />
+                  <span className="text-foreground">Created by: {asset.created_by_name ?? "-"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="size-4 text-muted-foreground" />
+                  <span className="text-foreground">Updated by: {asset.updated_by_name ?? "-"}</span>
                 </div>
               </CardContent>
             </Card>
