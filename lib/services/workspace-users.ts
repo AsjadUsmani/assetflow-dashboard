@@ -4,6 +4,9 @@ export type WorkspaceUser = {
   id: number
   username: string
   email: string | null
+  title: string | null
+  designation_id: number | null
+  designation_name: string | null
   role_name: string | null
   department_name: string | null
   country_id: number | null
@@ -27,6 +30,7 @@ export type CountryOption = {
 export type WorkspaceUserMeta = {
   office_options: UserOfficeOption[]
   country_options: CountryOption[]
+  designation_options: { id: number; name: string }[]
 }
 
 export type Role = {
@@ -41,7 +45,7 @@ export async function getWorkspaceUsers(): Promise<WorkspaceUser[]> {
 
 export async function getWorkspaceUserMeta(): Promise<WorkspaceUserMeta> {
   const json = await apiService.get<WorkspaceUserMeta>("/workspace/users/meta", true)
-  return json.data ?? { office_options: [], country_options: [] }
+  return json.data ?? { office_options: [], country_options: [], designation_options: [] }
 }
 
 export async function getWorkspaceRoles(): Promise<Role[]> {

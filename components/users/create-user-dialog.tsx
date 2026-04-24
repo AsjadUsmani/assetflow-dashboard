@@ -31,6 +31,13 @@ export function CreateUserDialog() {
   const [open, setOpen] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("");
+  const [locationId, setLocationId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -51,7 +58,33 @@ export function CreateUserDialog() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("First name and last name are required.");
+      return;
+    }
+    if (!email.trim()) {
+      setError("Email address is required.");
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (!role) {
+      setError("Role is required.");
+      return;
+    }
+    if (!locationId) {
+      setError("Location is required.");
+      return;
+    }
+    if (!departmentId) {
+      setError("Department is required.");
+      return;
+    }
+
+    setError(null);
+    // TODO: wire API create request here when dialog flow is finalized
     setOpen(false);
   };
 
@@ -75,20 +108,36 @@ export function CreateUserDialog() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="first-name">First Name</Label>
-                <Input id="first-name" placeholder="John" />
+                <Input
+                  id="first-name"
+                  placeholder="John"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="last-name">Last Name</Label>
-                <Input id="last-name" placeholder="Doe" />
+                <Input
+                  id="last-name"
+                  placeholder="Doe"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" placeholder="john@company.com" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="john@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Select>
+              <Select value={role} onValueChange={setRole}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
@@ -105,7 +154,7 @@ export function CreateUserDialog() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="location">Location</Label>
-              <Select>
+              <Select value={locationId} onValueChange={setLocationId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
@@ -120,7 +169,7 @@ export function CreateUserDialog() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="department">Department</Label>
-              <Select>
+              <Select value={departmentId} onValueChange={setDepartmentId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
@@ -139,6 +188,7 @@ export function CreateUserDialog() {
                 Send invitation email to user
               </Label>
             </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
           <DialogFooter>
             <Button

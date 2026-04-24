@@ -41,6 +41,8 @@ type Employee = {
   country_name: string | null
   city: string | null
   title: string | null
+  designation_id: number | null
+  designation_name: string | null
   office: "INDIA_HO" | "TRADITIONAL" | "VIP" | "INDIA_RO" | null
   is_active: boolean
   last_login: string | null
@@ -208,8 +210,8 @@ export default function EmployeeDetailsPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Title</Label>
-                  <Input value={employee.title ?? ""} readOnly disabled />
+                  <Label>Designation</Label>
+                  <Input value={employee.designation_name ?? employee.title ?? ""} readOnly disabled />
                 </div>
                 <div className="space-y-2">
                   <Label>City</Label>

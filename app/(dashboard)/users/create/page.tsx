@@ -55,6 +55,7 @@ export default function AddUserPage() {
   const [roles, setRoles] = React.useState<Role[]>([])
   const [departments, setDepartments] = React.useState<Department[]>([])
   const [officeOptions, setOfficeOptions] = React.useState<UserOfficeOption[]>([])
+  const [designationOptions, setDesignationOptions] = React.useState<Array<{ id: number; name: string }>>([])
 
   const [username, setUsername] = React.useState("")
   const [email, setEmail] = React.useState("")
@@ -64,7 +65,7 @@ export default function AddUserPage() {
   const [departmentId, setDepartmentId] = React.useState("")
   const [departmentPopoverOpen, setDepartmentPopoverOpen] = React.useState(false)
   const [city, setCity] = React.useState("")
-  const [title, setTitle] = React.useState("")
+  const [designationId, setDesignationId] = React.useState("")
   const [office, setOffice] = React.useState("")
   const [isActive, setIsActive] = React.useState(true)
 
@@ -97,12 +98,14 @@ export default function AddUserPage() {
       setRoles(roles)
       setDepartments(depts)
       setOfficeOptions(meta.office_options ?? [])
+      setDesignationOptions(meta.designation_options ?? [])
     } catch {
       if (controller.signal.aborted) return
 
       setRoles([])
       setDepartments([])
       setOfficeOptions([])
+      setDesignationOptions([])
     }
   }
 
@@ -123,7 +126,7 @@ export default function AddUserPage() {
         department_id: Number(departmentId) || null,
         country_name: HARDCODED_COUNTRY_NAME,
         city: city.trim() || null,
-        title: title.trim() || null,
+        designation_id: designationId ? Number(designationId) : null,
         office,
         is_active: isActive,
       })
@@ -278,8 +281,19 @@ export default function AddUserPage() {
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="title">Title</Label>
-                      <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
+                      <Label htmlFor="designation">Designation</Label>
+                      <Select value={designationId} onValueChange={setDesignationId}>
+                        <SelectTrigger id="designation">
+                          <SelectValue placeholder="Select designation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {designationOptions.map((designation) => (
+                            <SelectItem key={designation.id} value={String(designation.id)}>
+                              {designation.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="city">City</Label>
