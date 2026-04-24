@@ -268,11 +268,11 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         </DialogHeader>
 
         <Tabs defaultValue="basic" className="mt-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            <TabsTrigger value="properties" disabled={!selectedTypeId}>
+            {/* <TabsTrigger value="properties" disabled={!selectedTypeId}>
               Properties
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger value="assignment">Assignment</TabsTrigger>
           </TabsList>
 
@@ -291,7 +291,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
               </Select>
             </div>
 
-            {assetType && (
+            {/* {assetType && (
               <Alert className="bg-primary/10 border-primary/30">
                 <AlertCircle className="size-4 text-primary" />
                 <AlertDescription className="text-sm">
@@ -305,7 +305,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                   ].filter(Boolean).join(", ") || "none"}
                 </AlertDescription>
               </Alert>
-            )}
+            )} */}
 
             <div className="space-y-2">
               <Label htmlFor="name">Asset Name <span className="text-destructive">*</span></Label>
