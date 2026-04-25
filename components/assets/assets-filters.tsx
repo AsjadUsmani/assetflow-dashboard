@@ -54,7 +54,7 @@ export function AssetsFilters({
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search assets by name, serial number..."
+            placeholder="Search assets by host name, serial number..."
             value={filters.search}
             onChange={(e) =>
               onFiltersChange((prev) => ({ ...prev, search: e.target.value }))
@@ -78,6 +78,8 @@ export function AssetsFilters({
             <SelectItem value="in_maintenance">In Maintenance</SelectItem>
             <SelectItem value="retired">Retired</SelectItem>
             <SelectItem value="lost">Lost</SelectItem>
+            <SelectItem value="pending_disposal">Pending for Disposal</SelectItem>
+            <SelectItem value="disposed">Disposed</SelectItem>
           </SelectContent>
         </Select>
 

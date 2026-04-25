@@ -18,6 +18,8 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   in_maintenance: { label: "In Maintenance", className: "bg-warning/20 text-warning border-warning/30" },
   retired: { label: "Retired", className: "bg-muted text-muted-foreground border-border" },
   lost: { label: "Lost", className: "bg-destructive/20 text-destructive border-destructive/30" },
+  pending_disposal: { label: "Pending for Disposal", className: "bg-amber-500/20 text-amber-500 border-amber-500/30" },
+  disposed: { label: "Disposed", className: "bg-slate-500/20 text-slate-300 border-slate-500/30" },
 };
 
 function formatDate(s: string | null): string {
@@ -87,14 +89,14 @@ export function AssetDetailClient() {
         breadcrumbs={[
           { label: "Home", href: "/" },
           { label: "Assets", href: "/assets" },
-          { label: asset.name },
+          { label: asset.host_name || asset.name },
         ]}
       />
       <div className="flex flex-1 flex-col gap-6 p-6">
         <div className="flex items-start justify-between">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight">{asset.name}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">{asset.host_name || asset.name}</h1>
               <Badge variant="outline" className={status.className}>
                 {status.label}
               </Badge>
@@ -136,6 +138,14 @@ export function AssetDetailClient() {
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Serial Number</p>
                     <p className="font-medium text-foreground">{asset.serial_number ?? "-"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Designation</p>
+                    <p className="font-medium text-foreground">{asset.designation_name ?? "-"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Brand / Model</p>
+                    <p className="font-medium text-foreground">{asset.brand ?? "-"} / {asset.model_name ?? "-"}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Created At</p>
@@ -197,6 +207,7 @@ export function AssetDetailClient() {
                 <p>Purchase: {formatDate(asset.purchase_date)}</p>
                 <p>Warranty end: {formatDate(asset.warranty_end_date)}</p>
                 <p>Expiry: {formatDate(asset.expiry_date)}</p>
+                <p>Return date: {formatDate(asset.return_date)}</p>
               </CardContent>
             </Card>
           </div>

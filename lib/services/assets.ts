@@ -5,6 +5,11 @@ export type Asset = {
   asset_type_id: number
   asset_type_name: string
   name: string
+  host_name: string
+  designation_id: number | null
+  designation_name: string | null
+  brand: string | null
+  model_name: string | null
   serial_number: string | null
   asset_tag: string | null
   cost: number | null
@@ -27,7 +32,7 @@ export type Asset = {
   expiry_date: string | null
   assigned_date: string | null
   usage_type: string | null
-  impact: string | null
+  return_date: string | null
   remark: string | null
   property_values: Record<string, unknown> | null
   created_at: string
@@ -44,6 +49,10 @@ export type ListAssetsQuery = {
 export type CreateAssetBody = {
   asset_type_id: number
   name: string
+  host_name?: string
+  designation_id?: number
+  brand?: string
+  model_name?: string
   serial_number?: string
   asset_tag?: string
   cost?: number
@@ -58,23 +67,49 @@ export type CreateAssetBody = {
   expiry_date?: string
   assigned_date?: string
   usage_type?: string
-  impact?: string
+  return_date?: string
   remark?: string
   property_values?: Record<string, unknown>
 }
 
 export type UpdateAssetBody = {
   name?: string
+  host_name?: string
+  designation_id?: number | null
+  brand?: string | null
+  model_name?: string | null
   serial_number?: string | null
   status?: string
   location_id?: number | null
   department_id?: number | null
   assigned_to_user_id?: number | null
-  managed_by_role_id?: number | null
+  managed_by_user_id?: number | null
   purchase_date?: string | null
   warranty_end_date?: string | null
   expiry_date?: string | null
+  assigned_date?: string | null
+  usage_type?: string | null
+  return_date?: string | null
+  remark?: string | null
   property_values?: Record<string, unknown> | null
+}
+
+export type AssignmentHistoryEntry = {
+  id: number
+  asset_id: number
+  asset_name: string | null
+  previous_user_id: number | null
+  previous_user_name: string | null
+  assigned_to_user_id: number | null
+  assigned_to_user_name: string | null
+  previous_managed_by_user_id: number | null
+  previous_managed_by_user_name: string | null
+  managed_by_user_id: number | null
+  managed_by_user_name: string | null
+  changed_by_user_id: number | null
+  changed_by_user_name: string | null
+  changed_at: string
+  note: string | null
 }
 
 const BASE = "/workspace/assets"
@@ -118,4 +153,10 @@ export async function deleteAsset(id: number): Promise<void> {
 
 export async function exportAssetsCsv(): Promise<Blob> {
   return apiService.getFile(`${BASE}/export-csv`)
+}
+
+export async function getAssignmentHistory(assetId?: number): Promise<AssignmentHistoryEntry[]> {
+  const query = assetId != null ? `?asset_id=${assetId}` : ""
+  const json = await apiService.get<AssignmentHistoryEntry[]>(`${BASE}/assignment-history${query}`, true)
+  return json.data ?? []
 }

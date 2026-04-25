@@ -52,17 +52,23 @@ export function EditAssetClient() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [name, setName] = useState("");
+  const [hostName, setHostName] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
   const [status, setStatus] = useState("available");
   const [locationId, setLocationId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [assignedUserId, setAssignedUserId] = useState("");
+  const [managedByUserId, setManagedByUserId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
+  const [assignedDate, setAssignedDate] = useState("");
+  const [usageType, setUsageType] = useState("");
+  const [returnDate, setReturnDate] = useState("");
+  const [remark, setRemark] = useState("");
   const [propertyValues, setPropertyValues] = useState<Record<string, string | number | boolean>>({});
   const [processor, setProcessor] = useState("");
+  const [modelName, setModelName] = useState("");
   const [currentTab, setCurrentTab] = useState(defaultTab);
 
   const requiredProperties = useMemo(
@@ -93,15 +99,20 @@ export function EditAssetClient() {
         setLocations(locs);
         setDepartments(depts);
         setUsers(usrs);
-        setName(a.name);
+        setHostName(a.host_name ?? a.name);
         setSerialNumber(a.serial_number ?? "");
         setStatus(a.status);
         setLocationId(a.location_id ? String(a.location_id) : "");
         setDepartmentId(a.department_id ? String(a.department_id) : "");
         setAssignedUserId(a.assigned_to_user_id ? String(a.assigned_to_user_id) : "");
+        setManagedByUserId(a.managed_by_user_id ? String(a.managed_by_user_id) : "");
         setPurchaseDate(toDateInputValue(a.purchase_date));
         setWarrantyEndDate(toDateInputValue(a.warranty_end_date));
         setExpiryDate(toDateInputValue(a.expiry_date));
+        setAssignedDate(toDateInputValue(a.assigned_date));
+        setUsageType(a.usage_type ?? "");
+        setReturnDate(toDateInputValue(a.return_date));
+        setRemark(a.remark ?? "");
         const pv: Record<string, string | number | boolean> = {};
         if (a.property_values && typeof a.property_values === "object") {
           Object.entries(a.property_values as Record<string, unknown>).forEach(([k, v]) => {
@@ -138,6 +149,15 @@ export function EditAssetClient() {
               "",
           ),
         );
+        setModelName(
+          String(
+            normalizedByName["Model"] ??
+              normalizedByName["model"] ??
+              pv["Model"] ??
+              pv["model"] ??
+              "",
+          ),
+        );
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -167,8 +187,8 @@ export function EditAssetClient() {
   const canContinueFromProperties = validateRequiredProperties();
 
   const handleContinueFromBasic = () => {
-    if (!name.trim()) {
-      setError("Asset name is required");
+    if (!hostName.trim()) {
+      setError("Host name is required");
       return;
     }
     setError(null);
@@ -198,20 +218,33 @@ export function EditAssetClient() {
       Object.entries(propertyValues).forEach(([k, v]) => {
         if (v !== "" && v !== undefined) pv[k] = v;
       });
+      delete pv["model"];
+      delete pv["serial_number"];
+      delete pv["processor"];
       if (processor.trim()) {
         pv["Processor / CPU"] = processor.trim();
-        pv["processor"] = processor.trim();
+      }
+      if (serialNumber.trim()) {
+        pv["Serial Number"] = serialNumber.trim();
+      }
+      if (modelName.trim()) {
+        pv["Model"] = modelName.trim();
       }
       const body: UpdateAssetBody = {
-        name: name.trim(),
+        name: hostName.trim(),
         serial_number: serialNumber.trim() || null,
         status,
         location_id: locationId ? Number(locationId) : null,
         department_id: departmentId ? Number(departmentId) : null,
         assigned_to_user_id: assignedUserId ? Number(assignedUserId) : null,
+        managed_by_user_id: managedByUserId ? Number(managedByUserId) : null,
         purchase_date: purchaseDate || null,
         warranty_end_date: warrantyEndDate || null,
         expiry_date: expiryDate || null,
+        assigned_date: assignedDate || null,
+        usage_type: usageType || null,
+        return_date: returnDate || null,
+        remark: remark.trim() || null,
         property_values: Object.keys(pv).length > 0 ? pv : null,
       };
       await updateAsset(asset.id, body);
@@ -254,7 +287,7 @@ export function EditAssetClient() {
         breadcrumbs={[
           { label: "Home", href: "/" },
           { label: "Assets", href: "/assets" },
-          { label: asset.name, href: `/assets/${asset.id}` },
+          { label: asset.host_name || asset.name, href: `/assets/${asset.id}` },
           { label: "Edit" },
         ]}
       />
@@ -277,8 +310,8 @@ export function EditAssetClient() {
               <p className="text-sm text-muted-foreground">Type: {asset.asset_type_name}</p>
               <p className="text-sm text-muted-foreground">Created at: {toDateInputValue(asset.created_at) || "-"}</p>
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Asset Name *</Label>
-                <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} required className="bg-secondary border-0" />
+                <Label htmlFor="edit-name">Host Name *</Label>
+                <Input id="edit-name" value={hostName} onChange={(e) => setHostName(e.target.value)} required className="bg-secondary border-0" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-serial">Serial Number</Label>
@@ -294,6 +327,15 @@ export function EditAssetClient() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="edit-model-name">Model Name</Label>
+                <Input
+                  id="edit-model-name"
+                  value={modelName}
+                  onChange={(e) => setModelName(e.target.value)}
+                  className="bg-secondary border-0"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger className="bg-secondary border-0">
@@ -305,6 +347,8 @@ export function EditAssetClient() {
                     <SelectItem value="in_maintenance">In Maintenance</SelectItem>
                     <SelectItem value="retired">Retired</SelectItem>
                     <SelectItem value="lost">Lost</SelectItem>
+                    <SelectItem value="pending_disposal">Pending for Disposal</SelectItem>
+                    <SelectItem value="disposed">Disposed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -439,6 +483,47 @@ export function EditAssetClient() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Managed By</Label>
+                <Select value={managedByUserId} onValueChange={setManagedByUserId}>
+                  <SelectTrigger className="bg-secondary border-0">
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.filter((u) => u.is_active).map((user) => (
+                      <SelectItem key={user.id} value={String(user.id)}>
+                        {user.username}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Assigned Date</Label>
+                <Input type="date" value={assignedDate} onChange={(e) => setAssignedDate(e.target.value)} className="bg-secondary border-0" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Usage Type</Label>
+                  <Select value={usageType} onValueChange={setUsageType}>
+                    <SelectTrigger className="bg-secondary border-0">
+                      <SelectValue placeholder="Select usage type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Permanent">Permanent</SelectItem>
+                      <SelectItem value="Loaner">Loaner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Return Date</Label>
+                  <Input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className="bg-secondary border-0" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Remark</Label>
+                <Input value={remark} onChange={(e) => setRemark(e.target.value)} className="bg-secondary border-0" />
               </div>
             </TabsContent>
           </Tabs>

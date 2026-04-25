@@ -70,9 +70,10 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [managedByUserId, setManagedByUserId] = useState("");
   const [assignedDate, setAssignedDate] = useState("");
   const [usageType, setUsageType] = useState("");
-  const [impact, setImpact] = useState("");
+  const [returnDate, setReturnDate] = useState("");
   const [remark, setRemark] = useState("");
   const [processor, setProcessor] = useState("");
+  const [modelName, setModelName] = useState("");
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
   const [departmentPopoverOpen, setDepartmentPopoverOpen] = useState(false);
   const [assignedUserPopoverOpen, setAssignedUserPopoverOpen] = useState(false);
@@ -161,9 +162,10 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setManagedByPopoverOpen(false);
       setAssignedDate("");
       setUsageType("");
-      setImpact("");
+      setReturnDate("");
       setRemark("");
       setProcessor("");
+      setModelName("");
       setPurchaseDate("");
       setWarrantyEndDate("");
       setExpiryDate("");
@@ -209,9 +211,17 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       Object.entries(propertyValues).forEach(([k, v]) => {
         if (v !== "" && v !== undefined) pv[k] = v;
       });
+      delete pv["model"];
+      delete pv["serial_number"];
+      delete pv["processor"];
       if (processor.trim()) {
         pv["Processor / CPU"] = processor.trim();
-        pv["processor"] = processor.trim();
+      }
+      if (serialNumber.trim()) {
+        pv["Serial Number"] = serialNumber.trim();
+      }
+      if (modelName.trim()) {
+        pv["Model"] = modelName.trim();
       }
       const body: CreateAssetBody = {
         asset_type_id: Number(selectedTypeId),
@@ -230,7 +240,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         expiry_date: expiryDate || undefined,
         assigned_date: assignedDate || undefined,
         usage_type: usageType || undefined,
-        impact: impact || undefined,
+        return_date: returnDate || undefined,
         remark: remark.trim() || undefined,
         property_values: Object.keys(pv).length > 0 ? pv : undefined,
       };
@@ -301,8 +311,8 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
             )} */}
 
             <div className="space-y-2">
-              <Label htmlFor="name">Asset Name <span className="text-destructive">*</span></Label>
-              <Input id="name" placeholder="e.g., MacBook Pro 16-inch" className="bg-secondary border-0" value={name} onChange={(e) => setName(e.target.value)} />
+              <Label htmlFor="name">Host Name <span className="text-destructive">*</span></Label>
+              <Input id="name" placeholder="e.g., LAPTOP-001" className="bg-secondary border-0" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="serialNumber">Serial Number</Label>
@@ -333,6 +343,16 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="modelName">Model Name</Label>
+              <Input
+                id="modelName"
+                placeholder="e.g., Latitude 5440"
+                className="bg-secondary border-0"
+                value={modelName}
+                onChange={(e) => setModelName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Status</Label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="bg-secondary border-0">
@@ -344,6 +364,8 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                   <SelectItem value="in_maintenance">In Maintenance</SelectItem>
                   <SelectItem value="retired">Retired</SelectItem>
                   <SelectItem value="lost">Lost</SelectItem>
+                  <SelectItem value="pending_disposal">Pending for Disposal</SelectItem>
+                  <SelectItem value="disposed">Disposed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -604,17 +626,8 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="impact">Impact</Label>
-                <Select value={impact} onValueChange={setImpact}>
-                  <SelectTrigger className="bg-secondary border-0">
-                    <SelectValue placeholder="Select impact" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="returnDate">Return Date</Label>
+                <Input id="returnDate" type="date" className="bg-secondary border-0" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">

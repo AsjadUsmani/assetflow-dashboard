@@ -41,6 +41,8 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   in_maintenance: { label: "In Maintenance", className: "bg-warning/20 text-warning border-warning/30" },
   retired: { label: "Retired", className: "bg-muted text-muted-foreground border-border" },
   lost: { label: "Lost", className: "bg-destructive/20 text-destructive border-destructive/30" },
+  pending_disposal: { label: "Pending for Disposal", className: "bg-amber-500/20 text-amber-500 border-amber-500/30" },
+  disposed: { label: "Disposed", className: "bg-slate-500/20 text-slate-300 border-slate-500/30" },
 };
 
 export function AssetsTable({
@@ -104,7 +106,7 @@ export function AssetsTable({
                   disabled={assets.length === 0}
                 />
               </TableHead>
-              <TableHead className="text-muted-foreground">Asset Name</TableHead>
+              <TableHead className="text-muted-foreground">Host Name</TableHead>
               <TableHead className="text-muted-foreground">Type</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
               <TableHead className="text-muted-foreground">Location</TableHead>
@@ -142,7 +144,7 @@ export function AssetsTable({
                         href={`/assets/${asset.id}`}
                         className="font-medium text-foreground hover:text-primary transition-colors"
                       >
-                        {asset.name}
+                        {asset.host_name || asset.name}
                       </Link>
                       {asset.serial_number && (
                         <p className="text-xs text-muted-foreground">{asset.serial_number}</p>
