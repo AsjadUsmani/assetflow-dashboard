@@ -70,10 +70,9 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [managedByUserId, setManagedByUserId] = useState("");
   const [assignedDate, setAssignedDate] = useState("");
   const [usageType, setUsageType] = useState("");
+  const [impact, setImpact] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [remark, setRemark] = useState("");
-  const [processor, setProcessor] = useState("");
-  const [modelName, setModelName] = useState("");
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
   const [departmentPopoverOpen, setDepartmentPopoverOpen] = useState(false);
   const [assignedUserPopoverOpen, setAssignedUserPopoverOpen] = useState(false);
@@ -162,10 +161,9 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setManagedByPopoverOpen(false);
       setAssignedDate("");
       setUsageType("");
+      setImpact("");
       setReturnDate("");
       setRemark("");
-      setProcessor("");
-      setModelName("");
       setPurchaseDate("");
       setWarrantyEndDate("");
       setExpiryDate("");
@@ -211,17 +209,8 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       Object.entries(propertyValues).forEach(([k, v]) => {
         if (v !== "" && v !== undefined) pv[k] = v;
       });
-      delete pv["model"];
-      delete pv["serial_number"];
-      delete pv["processor"];
-      if (processor.trim()) {
-        pv["Processor / CPU"] = processor.trim();
-      }
       if (serialNumber.trim()) {
         pv["Serial Number"] = serialNumber.trim();
-      }
-      if (modelName.trim()) {
-        pv["Model"] = modelName.trim();
       }
       const body: CreateAssetBody = {
         asset_type_id: Number(selectedTypeId),
@@ -240,6 +229,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         expiry_date: expiryDate || undefined,
         assigned_date: assignedDate || undefined,
         usage_type: usageType || undefined,
+        impact: impact || undefined,
         return_date: returnDate || undefined,
         remark: remark.trim() || undefined,
         property_values: Object.keys(pv).length > 0 ? pv : undefined,
@@ -271,11 +261,11 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         </DialogHeader>
 
         <Tabs defaultValue="basic" className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            {/* <TabsTrigger value="properties" disabled={!selectedTypeId}>
+            <TabsTrigger value="properties" disabled={!selectedTypeId}>
               Properties
-            </TabsTrigger> */}
+            </TabsTrigger>
             <TabsTrigger value="assignment">Assignment</TabsTrigger>
           </TabsList>
 
@@ -294,7 +284,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
               </Select>
             </div>
 
-            {/* {assetType && (
+            {assetType && (
               <Alert className="bg-primary/10 border-primary/30">
                 <AlertCircle className="size-4 text-primary" />
                 <AlertDescription className="text-sm">
@@ -308,7 +298,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                   ].filter(Boolean).join(", ") || "none"}
                 </AlertDescription>
               </Alert>
-            )} */}
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="name">Host Name <span className="text-destructive">*</span></Label>
@@ -331,26 +321,6 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                 <Label htmlFor="domain">Domain</Label>
                 <Input id="domain" placeholder="Domain" className="bg-secondary border-0" value={domain} onChange={(e) => setDomain(e.target.value)} />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="processor">Processor / CPU </Label>
-              <Input
-                id="processor"
-                placeholder="e.g., Intel i7 / Apple M2"
-                className="bg-secondary border-0"
-                value={processor}
-                onChange={(e) => setProcessor(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="modelName">Model Name</Label>
-              <Input
-                id="modelName"
-                placeholder="e.g., Latitude 5440"
-                className="bg-secondary border-0"
-                value={modelName}
-                onChange={(e) => setModelName(e.target.value)}
-              />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
@@ -626,9 +596,22 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="returnDate">Return Date</Label>
-                <Input id="returnDate" type="date" className="bg-secondary border-0" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
+                <Label htmlFor="impact">Impact</Label>
+                <Select value={impact} onValueChange={setImpact}>
+                  <SelectTrigger className="bg-secondary border-0">
+                    <SelectValue placeholder="Select impact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="returnDate">Return Date</Label>
+              <Input id="returnDate" type="date" className="bg-secondary border-0" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="remark">Remark</Label>

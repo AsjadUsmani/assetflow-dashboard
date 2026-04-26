@@ -32,6 +32,7 @@ export type Asset = {
   expiry_date: string | null
   assigned_date: string | null
   usage_type: string | null
+  impact: string | null
   return_date: string | null
   remark: string | null
   property_values: Record<string, unknown> | null
@@ -67,6 +68,7 @@ export type CreateAssetBody = {
   expiry_date?: string
   assigned_date?: string
   usage_type?: string
+  impact?: string
   return_date?: string
   remark?: string
   property_values?: Record<string, unknown>
@@ -89,6 +91,7 @@ export type UpdateAssetBody = {
   expiry_date?: string | null
   assigned_date?: string | null
   usage_type?: string | null
+  impact?: string | null
   return_date?: string | null
   remark?: string | null
   property_values?: Record<string, unknown> | null

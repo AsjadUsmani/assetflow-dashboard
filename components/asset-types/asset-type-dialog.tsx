@@ -240,11 +240,11 @@ export function AssetTypeDialog({ onSuccess }: { onSuccess?: () => void }) {
         )}
 
         <Tabs defaultValue="general" className="mt-4">
-          {/* <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="behavior">Behavior</TabsTrigger>
             <TabsTrigger value="properties">Properties</TabsTrigger>
-          </TabsList> */}
+          </TabsList>
 
           <TabsContent value="general" className="space-y-4 mt-4">
             <div className="space-y-2">
@@ -259,7 +259,6 @@ export function AssetTypeDialog({ onSuccess }: { onSuccess?: () => void }) {
                 }
               />
             </div>
-            {/*
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -275,10 +274,8 @@ export function AssetTypeDialog({ onSuccess }: { onSuccess?: () => void }) {
                 }
               />
             </div>
-            */}
           </TabsContent>
 
-          {/*
           <TabsContent value="behavior" className="space-y-4 mt-4">
             <p className="text-sm text-muted-foreground">
               Configure how assets of this type behave in the system.
@@ -369,9 +366,7 @@ export function AssetTypeDialog({ onSuccess }: { onSuccess?: () => void }) {
               </div>
             </div>
           </TabsContent>
-          */}
 
-          {/*
           <TabsContent value="properties" className="space-y-4 mt-4">
             <p className="text-sm text-muted-foreground">
               Search and add existing properties, or create new ones. You can
@@ -557,7 +552,6 @@ export function AssetTypeDialog({ onSuccess }: { onSuccess?: () => void }) {
               </div>
             )}
           </TabsContent>
-          */}
         </Tabs>
 
         <DialogFooter className="mt-6">

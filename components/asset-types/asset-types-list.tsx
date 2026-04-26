@@ -225,24 +225,21 @@ function EditAssetTypeDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Tabs defaultValue="general" className="mt-2">
-            {/* <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="behavior">Behavior</TabsTrigger>
               <TabsTrigger value="properties">Properties</TabsTrigger>
-            </TabsList> */}
+            </TabsList>
             <TabsContent value="general" className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Type Name</Label>
                 <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
-              {/*
               <div className="space-y-2">
                 <Label htmlFor="edit-desc">Description</Label>
                 <Textarea id="edit-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
               </div>
-              */}
             </TabsContent>
-            {/*
             <TabsContent value="behavior" className="space-y-4 mt-4">
               <p className="text-sm text-muted-foreground">
                 Configure how assets of this type behave in the system.
@@ -285,8 +282,6 @@ function EditAssetTypeDialog({
                 </div>
               </div>
             </TabsContent>
-            */}
-            {/*
             <TabsContent value="properties" className="space-y-4 mt-4">
               <p className="text-sm text-muted-foreground">
                 Search or add existing properties, or create new ones.
@@ -390,7 +385,6 @@ function EditAssetTypeDialog({
                 </div>
               )}
             </TabsContent>
-            */}
           </Tabs>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
@@ -402,7 +396,6 @@ function EditAssetTypeDialog({
   );
 }
 
-/*
 const behaviorFlags = [
   { key: "hasExpiry", label: "Has Expiry", icon: Calendar },
   { key: "isRechargeable", label: "Rechargeable", icon: Zap },
@@ -410,7 +403,6 @@ const behaviorFlags = [
   { key: "isMovable", label: "Movable", icon: ArrowLeftRight },
   { key: "requiresAssignment", label: "Requires Assignment", icon: UserCheck },
 ] as const;
-*/
 
 function ViewDetailsDialog({
   assetType,
@@ -570,29 +562,35 @@ export function AssetTypesList() {
               </DropdownMenu>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/*
-            <div className="flex flex-wrap gap-2">
-              {behaviorFlags.map((flag) => {
-                const isEnabled = false; // behavior flags not yet stored in backend
-                const Icon = flag.icon;
+              <div className="flex flex-wrap gap-2">
+                {behaviorFlags.map((flag) => {
+                  const isEnabled = flag.key === "hasExpiry"
+                    ? !!assetType.has_expiry
+                    : flag.key === "isRechargeable"
+                      ? !!assetType.is_rechargeable
+                      : flag.key === "isOneTimeUse"
+                        ? !!assetType.is_one_time_use
+                        : flag.key === "isMovable"
+                          ? !!assetType.is_movable
+                          : !!assetType.requires_assignment;
+                  const Icon = flag.icon;
 
-                return (
-                  <Badge
-                    key={flag.key}
-                    variant={isEnabled ? "default" : "outline"}
-                    className={
-                      isEnabled
-                        ? "bg-primary/20 text-primary border-primary/30"
-                        : "bg-secondary text-muted-foreground border-border"
-                    }
-                  >
-                    <Icon className="mr-1 size-3" />
-                    {flag.label}
-                  </Badge>
-                );
-              })}
-            </div>
-            */}
+                  return (
+                    <Badge
+                      key={flag.key}
+                      variant={isEnabled ? "default" : "outline"}
+                      className={
+                        isEnabled
+                          ? "bg-primary/20 text-primary border-primary/30"
+                          : "bg-secondary text-muted-foreground border-border"
+                      }
+                    >
+                      <Icon className="mr-1 size-3" />
+                      {flag.label}
+                    </Badge>
+                  );
+                })}
+              </div>
 
               <div className="border-t border-border pt-4">
                 <div className="flex items-center justify-between text-sm">
