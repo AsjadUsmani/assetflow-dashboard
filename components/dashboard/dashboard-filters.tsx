@@ -109,15 +109,16 @@ export function DashboardFilters({ value, onChange }: DashboardFiltersProps) {
           </SelectContent>
         </Select>
 
+        
         <Select
           value={value.assetType}
           onValueChange={(selected) =>
             onChange({ ...value, assetType: selected })
           }
         >
-          <SelectTrigger className="w-40 bg-secondary border-0">
+          {/* <SelectTrigger className="w-40 bg-secondary border-0">
             <SelectValue placeholder="Asset Type" />
-          </SelectTrigger>
+          </SelectTrigger> */}
           <SelectContent>
             {assetTypes.map((type) => (
               <SelectItem key={type.id} value={String(type.id)}>
@@ -126,6 +127,7 @@ export function DashboardFilters({ value, onChange }: DashboardFiltersProps) {
             ))}
           </SelectContent>
         </Select>
+       
 
         <Select
           value={value.dateRange}

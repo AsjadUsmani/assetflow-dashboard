@@ -49,6 +49,12 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
     const assetType = filters.assetType ? Number(filters.assetType) : undefined;
 
     let isMounted = true;
+
+    /*
+      ORIGINAL: assets and requests were fetched together via Promise.all.
+      If `getRequests()` failed, `getAssets()` was discarded and `assetCount` stayed at 0.
+      Keeping the original code commented for reference.
+
     (async () => {
       try {
         const [assetsData, requestsData] = await Promise.all([
@@ -71,6 +77,50 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
         setRequests(filteredRequests);
       } catch {
         // ignore; global error handler can surface issues if needed
+      }
+    })();
+
+    */
+
+    (async () => {
+      // Fetch assets first and always set assetCount when possible.
+      try {
+        const assetsData = await getAssets({ location, department, assetType });
+        if (!isMounted) return;
+        const filteredAssets = assetsData.filter((asset) =>
+          isInDateRange(asset.created_at, filters.dateRange),
+        );
+        const assetIds = new Set(filteredAssets.map((asset) => asset.id));
+        setAssetCount(filteredAssets.length);
+
+        // Fetch requests separately; if this fails, keep requests as empty array.
+        try {
+          const requestsData = await getRequests();
+          if (!isMounted) return;
+          const filteredRequests = requestsData.filter((request) => {
+            const matchesDate = isInDateRange(request.created_at, filters.dateRange);
+            if (!matchesDate) return false;
+            if (request.asset_id == null) return true;
+            return assetIds.has(request.asset_id);
+          });
+          setRequests(filteredRequests);
+        } catch {
+          // keep requests empty if requests endpoint is unavailable
+          setRequests([]);
+        }
+      } catch {
+        // assets failed — leave assetCount at 0
+        // still attempt to fetch requests separately
+        try {
+          const requestsData = await getRequests();
+          if (!isMounted) return;
+          const filteredRequests = requestsData.filter((request) =>
+            isInDateRange(request.created_at, filters.dateRange),
+          );
+          setRequests(filteredRequests);
+        } catch {
+          setRequests([]);
+        }
       }
     })();
     return () => {

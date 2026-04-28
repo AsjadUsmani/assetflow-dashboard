@@ -6,11 +6,11 @@ import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
 import { AssetsByCategory } from "@/components/dashboard/assets-by-category";
 import { AssetsByLocation } from "@/components/dashboard/assets-by-location";
-import { RecentMovements } from "@/components/dashboard/recent-movements";
-import { ExpiringAssets } from "@/components/dashboard/expiring-assets";
-import { AlertsPanel } from "@/components/dashboard/alerts-panel";
-import { StockOverview } from "@/components/dashboard/stock-overview";
-import { PendingApprovals } from "@/components/dashboard/pending-approvals";
+// import { RecentMovements } from "@/components/dashboard/recent-movements";
+// import { ExpiringAssets } from "@/components/dashboard/expiring-assets";
+// import { AlertsPanel } from "@/components/dashboard/alerts-panel";
+// import { StockOverview } from "@/components/dashboard/stock-overview";
+// import { PendingApprovals } from "@/components/dashboard/pending-approvals";
 import {
   defaultDashboardFilters,
   type DashboardFilterState,
@@ -78,6 +78,12 @@ export default function DashboardPage() {
 
         <DashboardStats filters={filters} />
 
+        <div className="grid gap-6 md:grid-cols-2">
+          <AssetsByCategory filters={filters} />
+          <AssetsByLocation filters={filters} />
+        </div>
+
+        {/*
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <div className="grid gap-6 md:grid-cols-2">
@@ -98,6 +104,7 @@ export default function DashboardPage() {
             <AlertsPanel filters={filters} />
           </div>
         </div>
+        */}
       </div>
     </>
   );
