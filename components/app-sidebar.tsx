@@ -76,20 +76,6 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   ClipboardList,
 };
 
-const allowedPaths = new Set([
-  "/dashboard",
-  "/users",
-  "/employees",
-  "/assets",
-  "/asset-types",
-  "/locations",
-  "/organizations",
-  "/departments",
-  "/property-builder",
-  "/roles",
-  "/tracking-cycle",
-]);
-
 function getIcon(iconName: string | null): React.ComponentType<{ className?: string }> {
   if (!iconName) return LayoutDashboard;
   return iconMap[iconName] ?? LayoutDashboard;
@@ -188,7 +174,7 @@ export function AppSidebar() {
       const employeeMenu: WorkspaceMenu = {
         id: -1001,
         path: '/employees',
-        label: 'Employees',
+        label: 'Employee',
         icon: 'Users',
         sort_order: 0,
         children: [],
@@ -208,25 +194,6 @@ export function AppSidebar() {
       };
     });
   }, [menuGroups]);
-
-  const visibleMenuGroups = React.useMemo(() => {
-    const filterMenus = (menus: WorkspaceMenu[]): WorkspaceMenu[] =>
-      menus
-        .map((menu) => ({
-          ...menu,
-          children: filterMenus(menu.children ?? []),
-        }))
-        .filter(
-          (menu) => allowedPaths.has(menu.path) || (menu.children?.length ?? 0) > 0,
-        );
-
-    return menuGroupsWithEmployees
-      .map((group) => ({
-        ...group,
-        menus: filterMenus(group.menus ?? []),
-      }))
-      .filter((group) => group.menus.length > 0);
-  }, [menuGroupsWithEmployees]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -281,7 +248,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {visibleMenuGroups.map((group) => (
+        {menuGroupsWithEmployees.map((group) => (
           <React.Fragment key={group.id}>
             <SidebarGroup>
               <SidebarGroupLabel>{group.name}</SidebarGroupLabel>

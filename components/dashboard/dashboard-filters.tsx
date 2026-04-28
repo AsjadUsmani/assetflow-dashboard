@@ -74,7 +74,7 @@ export function DashboardFilters({ value, onChange }: DashboardFiltersProps) {
         </div>
 
         <Select
-          value={value.location}
+          value={value.location || undefined}
           onValueChange={(selected) =>
             onChange({ ...value, location: selected })
           }
@@ -92,7 +92,7 @@ export function DashboardFilters({ value, onChange }: DashboardFiltersProps) {
         </Select>
 
         <Select
-          value={value.department}
+          value={value.department || undefined}
           onValueChange={(selected) =>
             onChange({ ...value, department: selected })
           }
@@ -111,14 +111,14 @@ export function DashboardFilters({ value, onChange }: DashboardFiltersProps) {
 
         
         <Select
-          value={value.assetType}
+          value={value.assetType || undefined}
           onValueChange={(selected) =>
             onChange({ ...value, assetType: selected })
           }
         >
-          {/* <SelectTrigger className="w-40 bg-secondary border-0">
+          <SelectTrigger className="w-40 bg-secondary border-0">
             <SelectValue placeholder="Asset Type" />
-          </SelectTrigger> */}
+          </SelectTrigger>
           <SelectContent>
             {assetTypes.map((type) => (
               <SelectItem key={type.id} value={String(type.id)}>
