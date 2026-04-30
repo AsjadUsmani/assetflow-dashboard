@@ -9,7 +9,13 @@ import { AppHeader } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -31,14 +37,18 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { getLocations } from "@/lib/services/locations";
+import { getWorkspaceUsers } from "@/lib/services/workspace-users";
 import { createDepartment } from "@/lib/services/departments";
 import type { Location } from "@/lib/services/locations";
+import type { WorkspaceUser } from "@/lib/services/workspace-users";
 
 export default function NewDepartmentPage() {
   const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
+  const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [locationId, setLocationId] = useState<string>("");
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
+  const [hodId, setHodId] = useState<string>("none");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,9 +56,15 @@ export default function NewDepartmentPage() {
     locations.find((loc) => String(loc.id) === locationId) ?? null;
 
   useEffect(() => {
-    getLocations()
-      .then(setLocations)
-      .catch(() => setLocations([]));
+    Promise.all([getLocations(), getWorkspaceUsers()])
+      .then(([locs, wsUsers]) => {
+        setLocations(locs);
+        setUsers(wsUsers.filter((u) => u.is_active));
+      })
+      .catch(() => {
+        setLocations([]);
+        setUsers([]);
+      });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -61,10 +77,8 @@ export default function NewDepartmentPage() {
     }
     const form = e.currentTarget;
     const name = (form.querySelector("#name") as HTMLInputElement).value.trim();
-    const code = (form.querySelector("#code") as HTMLInputElement)?.value?.trim() || undefined;
     const phone = (form.querySelector("#phone") as HTMLInputElement)?.value?.trim() || undefined;
     const email = (form.querySelector("#email") as HTMLInputElement)?.value?.trim() || undefined;
-    const description = (form.querySelector("#description") as HTMLTextAreaElement)?.value?.trim() || undefined;
 
     if (!name) return;
     setIsSubmitting(true);
@@ -72,10 +86,9 @@ export default function NewDepartmentPage() {
       await createDepartment({
         location_id: locId,
         name,
-        code,
+        hod_id: hodId !== "none" ? Number(hodId) : undefined,
         phone,
         email,
-        description,
       });
       router.push("/departments");
     } catch (err) {
@@ -174,42 +187,44 @@ export default function NewDepartmentPage() {
                   </Popover>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Department Name *</Label>
-                    <Input
-                      id="name"
-                      placeholder="e.g., Radiology"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="code">Department Code</Label>
-                    <Input id="code" placeholder="e.g., RAD" />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Department Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="e.g., Radiology"
+                    required
+                  />
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Extension</Label>
-                    <Input id="phone" placeholder="e.g., 1234" />
+                    <Label>Head of Department</Label>
+                    <Select value={hodId} onValueChange={setHodId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select user" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Not Assigned</SelectItem>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={String(user.id)}>
+                            {user.username}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Department Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="dept@example.com"
-                    />
+                    <Label htmlFor="phone">Phone Extension</Label>
+                    <Input id="phone" placeholder="e.g., 969" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Brief description of the department..."
-                    rows={3}
+                  <Label htmlFor="email">Department Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="dept@example.com"
                   />
                 </div>
 

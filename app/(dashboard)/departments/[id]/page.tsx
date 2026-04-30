@@ -9,8 +9,6 @@ import {
   Phone,
   Mail,
   Calendar,
-  Users,
-  Package,
   ArrowLeft,
   MoreHorizontal,
   Trash2,
@@ -26,22 +24,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { getDepartmentById, deleteDepartment } from "@/lib/services/departments";
 import type { Department } from "@/lib/services/departments";
 
@@ -141,15 +129,9 @@ export default function DepartmentDetailPage({
                   <FolderTree className="size-6 text-primary" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-semibold tracking-tight">
-                      {dept.name}
-                    </h1>
-                    <Badge variant="secondary">{dept.code ?? "—"}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {dept.location_name ?? "—"}
-                  </p>
+                  <h1 className="text-2xl font-semibold tracking-tight">
+                    {dept.name}
+                  </h1>
                 </div>
               </div>
             </div>
@@ -176,124 +158,55 @@ export default function DepartmentDetailPage({
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Staff Members
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <Users className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">—</span>
+          <Card>
+            <CardHeader>
+              <CardTitle>Department Information</CardTitle>
+              <CardDescription>Details about this department</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-3">
+                <MapPin className="mt-0.5 size-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Location</p>
+                  <p className="text-sm text-muted-foreground">
+                    {dept.location_name ?? "—"}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Assets
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <Package className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">—</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Head of Department
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <User className="size-5 text-primary" />
-                  <span className="text-sm font-medium">
+              </div>
+              <div className="flex items-start gap-3">
+                <User className="mt-0.5 size-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Head of Department</p>
+                  <p className="text-sm text-muted-foreground">
                     {dept.hod_name ?? "Not Assigned"}
-                  </span>
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Department Information</CardTitle>
-                <CardDescription>Details about this department</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 size-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Location</p>
-                    <p className="text-sm text-muted-foreground">
-                      {dept.location_name ?? "—"}
-                    </p>
-                  </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Phone className="mt-0.5 size-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Phone Extension</p>
+                  <p className="text-sm text-muted-foreground">{dept.phone ?? "—"}</p>
                 </div>
-                <div className="flex items-start gap-3">
-                  <User className="mt-0.5 size-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Head of Department</p>
-                    <p className="text-sm text-muted-foreground">
-                      {dept.hod_name ?? "Not Assigned"}
-                    </p>
-                  </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Mail className="mt-0.5 size-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Email</p>
+                  <p className="text-sm text-muted-foreground">{dept.email ?? "—"}</p>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Phone className="mt-0.5 size-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Phone Extension</p>
-                    <p className="text-sm text-muted-foreground">{dept.phone ?? "—"}</p>
-                  </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Calendar className="mt-0.5 size-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Created</p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(dept.created_at).toLocaleDateString()}
+                  </p>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Mail className="mt-0.5 size-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Email</p>
-                    <p className="text-sm text-muted-foreground">{dept.email ?? "—"}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Calendar className="mt-0.5 size-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Created</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(dept.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Staff Members</CardTitle>
-                    <CardDescription>Users in this department</CardDescription>
-                  </div>
-                  <Button size="sm" variant="outline" asChild>
-                    <Link href="/users/new">Add User</Link>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Users className="mb-2 size-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">No staff members yet</p>
-                  <Button size="sm" className="mt-4" asChild>
-                    <Link href="/users/new">Add First User</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </>

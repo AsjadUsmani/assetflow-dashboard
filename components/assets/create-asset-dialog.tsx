@@ -89,6 +89,12 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const selectedDepartment = departments.find((dept) => String(dept.id) === departmentId);
   const selectedAssignedUser = users.find((user) => String(user.id) === assignedUserId);
   const selectedManagedByUser = users.find((user) => String(user.id) === managedByUserId);
+  const canSubmit =
+    !loading &&
+    Boolean(selectedTypeId) &&
+    Boolean(name.trim()) &&
+    Boolean(assignedUserId) &&
+    Boolean(managedByUserId);
 
   const getPropertyDefaultValue = (prop: AssetType["properties"][number]): string | number | boolean | undefined => {
     const dataType = prop.data_type ?? "text";
@@ -198,7 +204,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   };
 
   const handleSubmit = async () => {
-    if (!selectedTypeId || !name.trim()) return;
+    if (!selectedTypeId || !name.trim() || !assignedUserId || !managedByUserId) return;
 
     // Temporary behavior: allow create without blocking on dynamic property requirements.
     setPropertyErrors({});
@@ -215,6 +221,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       const body: CreateAssetBody = {
         asset_type_id: Number(selectedTypeId),
         name: name.trim(),
+        host_name: name.trim(),
         serial_number: serialNumber.trim() || undefined,
         asset_tag: assetTag.trim() || undefined,
         cost: cost ? parseFloat(cost) : undefined,
@@ -509,7 +516,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
               </Popover>
             </div>
             <div className="space-y-2">
-              <Label>Assigned To</Label>
+              <Label>Assigned To <span className="text-destructive">*</span></Label>
               <Popover open={assignedUserPopoverOpen} onOpenChange={setAssignedUserPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start gap-2 font-normal">
@@ -544,7 +551,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
               </Popover>
             </div>
             <div className="space-y-2">
-              <Label>Managed By</Label>
+              <Label>Managed By <span className="text-destructive">*</span></Label>
               <Popover open={managedByPopoverOpen} onOpenChange={setManagedByPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start gap-2 font-normal">
@@ -623,7 +630,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         {error && <p className="text-sm text-destructive">{error}</p>}
         <DialogFooter className="mt-6">
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSubmit} disabled={!selectedTypeId || !name.trim() || loading}>
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSubmit} disabled={!canSubmit}>
             {loading ? "Creating..." : "Create Asset"}
           </Button>
         </DialogFooter>

@@ -219,7 +219,7 @@ export default function UserDetailsPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Country or Region</Label>
                   <Input value={countryName} readOnly disabled />
@@ -228,7 +228,7 @@ export default function UserDetailsPage() {
                   <Label>Office</Label>
                   <Input value={officeLabel} readOnly disabled />
                 </div>
-              </div>
+              </div> */}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">

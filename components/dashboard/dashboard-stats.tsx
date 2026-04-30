@@ -16,6 +16,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getAssets } from "@/lib/services/assets";
 import { getRequests, type AssetRequest } from "@/lib/services/requests";
 import {
+  hasMissingNonCompulsoryInfo,
+  isWarrantyEndingWithinDays,
+  type AssetPresetFilter,
+} from "@/lib/asset-insights";
+import {
   isInDateRange,
   type DashboardFilterState,
 } from "@/components/dashboard/filters";
@@ -41,7 +46,22 @@ type AlertStat = {
 
 export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
   const [assetCount, setAssetCount] = useState<number>(0);
+  const [missingInfoCount, setMissingInfoCount] = useState<number>(0);
+  const [warrantyEndingSoonCount, setWarrantyEndingSoonCount] = useState<number>(0);
   const [requests, setRequests] = useState<AssetRequest[]>([]);
+
+  const buildAssetsHref = (preset?: AssetPresetFilter) => {
+    const params = new URLSearchParams();
+    if (preset) params.set("preset", preset);
+    if (filters.assetType) params.set("assetType", filters.assetType);
+    if (filters.location) params.set("location", filters.location);
+    if (filters.department) params.set("department", filters.department);
+    if (filters.dateRange && filters.dateRange !== "all") {
+      params.set("dateRange", filters.dateRange);
+    }
+    const query = params.toString();
+    return query ? `/assets?${query}` : "/assets";
+  };
 
   useEffect(() => {
     const location = filters.location ? Number(filters.location) : undefined;
@@ -68,6 +88,10 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
         });
 
         setAssetCount(filteredAssets.length);
+        setMissingInfoCount(filteredAssets.filter(hasMissingNonCompulsoryInfo).length);
+        setWarrantyEndingSoonCount(
+          filteredAssets.filter((asset) => isWarrantyEndingWithinDays(asset, 30)).length,
+        );
         setRequests(filteredRequests);
       } catch {
         // ignore; global error handler can surface issues if needed
@@ -98,7 +122,25 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
         trend: "neutral",
         icon: Package,
         description: "Across all locations",
-        href: "/assets",
+        href: buildAssetsHref(),
+      },
+      {
+        title: "Assets have missing information",
+        value: missingInfoCount.toLocaleString(),
+        change: null,
+        trend: "neutral",
+        icon: AlertTriangle,
+        description: "At least 1 non-compulsory field is empty",
+        href: buildAssetsHref("missing-info"),
+      },
+      {
+        title: "Warranty ending in next 30 days",
+        value: warrantyEndingSoonCount.toLocaleString(),
+        change: null,
+        trend: "neutral",
+        icon: Clock,
+        description: "Assets with warranty close to expiry",
+        href: buildAssetsHref("warranty-ending-soon"),
       },
       /*
       {
@@ -152,15 +194,15 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
     ];
 
     return { stats, alertStats };
-  }, [assetCount, requests]);
+  }, [assetCount, missingInfoCount, warrantyEndingSoonCount, requests]);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+    <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
       {stats.map((stat) => {
         const isHighlight = stat.highlight;
         const card = (
           <Card
-            className={`bg-card border-border transition-colors ${stat.href ? "hover:bg-accent cursor-pointer" : ""} ${isHighlight ? "border-amber-500/50 bg-amber-500/5" : ""}`}
+            className={`h-full bg-card border-border transition-colors ${stat.href ? "hover:bg-accent cursor-pointer" : ""} ${isHighlight ? "border-amber-500/50 bg-amber-500/5" : ""}`}
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -204,8 +246,14 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
         );
 
         return (
-          <div key={stat.title}>
-            {stat.href ? <Link href={stat.href}>{card}</Link> : card}
+          <div key={stat.title} className="h-full">
+            {stat.href ? (
+              <Link href={stat.href} className="block h-full">
+                {card}
+              </Link>
+            ) : (
+              card
+            )}
           </div>
         );
       })}

@@ -6,6 +6,8 @@ import { getAssets, exportAssetsCsv } from "@/lib/services/assets";
 import { getAssetTypes } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
+import { isInDateRange } from "@/components/dashboard/filters";
+import { matchesAssetPreset, parseAssetPresetFilter } from "@/lib/asset-insights";
 import type { Asset, ListAssetsQuery } from "@/lib/services/assets";
 import type { AssetType } from "@/lib/services/asset-types";
 import type { Location } from "@/lib/services/locations";
@@ -44,9 +46,17 @@ const emptyFilters: AssetsFiltersState = {
 export function AssetsView() {
   const searchParams = useSearchParams();
   const assetTypeFromUrl = searchParams.get("assetType") ?? "";
+  const statusFromUrl = searchParams.get("status") ?? "";
+  const locationFromUrl = searchParams.get("location") ?? "";
+  const departmentFromUrl = searchParams.get("department") ?? "";
+  const dateRangeFromUrl = searchParams.get("dateRange") ?? "all";
+  const presetFromUrl = parseAssetPresetFilter(searchParams.get("preset"));
 
   const [filters, setFilters] = React.useState<AssetsFiltersState>(() => ({
     ...emptyFilters,
+    status: statusFromUrl,
+    location: locationFromUrl,
+    department: departmentFromUrl,
     assetType: assetTypeFromUrl,
   }));
   const [assets, setAssets] = React.useState<Asset[]>([]);
@@ -135,19 +145,42 @@ export function AssetsView() {
   }, [loadOptions]);
 
   React.useEffect(() => {
-    if (assetTypeFromUrl && filters.assetType !== assetTypeFromUrl) {
-      setFilters((prev) => ({ ...prev, assetType: assetTypeFromUrl }));
-    }
-  }, [assetTypeFromUrl]);
+    setFilters((prev) => {
+      const next = {
+        ...prev,
+        status: statusFromUrl,
+        location: locationFromUrl,
+        department: departmentFromUrl,
+        assetType: assetTypeFromUrl,
+      };
+      if (
+        prev.status === next.status &&
+        prev.location === next.location &&
+        prev.department === next.department &&
+        prev.assetType === next.assetType
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [assetTypeFromUrl, statusFromUrl, locationFromUrl, departmentFromUrl]);
 
   React.useEffect(() => {
     loadAssets();
   }, [loadAssets]);
 
+  const scopedAssets = React.useMemo(() => {
+    return assets.filter((asset) => {
+      if (presetFromUrl && !matchesAssetPreset(asset, presetFromUrl)) return false;
+      if (!isInDateRange(asset.created_at, dateRangeFromUrl)) return false;
+      return true;
+    });
+  }, [assets, presetFromUrl, dateRangeFromUrl]);
+
   const filteredAssets = React.useMemo(() => {
     const term = filters.search.trim().toLowerCase();
-    if (!term) return assets;
-    return assets.filter((asset) => {
+    if (!term) return scopedAssets;
+    return scopedAssets.filter((asset) => {
       return (
         (asset.host_name || asset.name).toLowerCase().includes(term) ||
         (asset.serial_number ?? "").toLowerCase().includes(term) ||
@@ -157,7 +190,7 @@ export function AssetsView() {
         (asset.assigned_to_name ?? "").toLowerCase().includes(term)
       );
     });
-  }, [assets, filters.search]);
+  }, [scopedAssets, filters.search]);
 
   return (
     <>

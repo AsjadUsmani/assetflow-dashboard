@@ -153,10 +153,10 @@ export default function EditUserPage() {
       toast({ variant: "destructive", title: "Role is required" })
       return
     }
-    if (!office) {
+    /* if (!office) {
       toast({ variant: "destructive", title: "Office is required" })
       return
-    }
+    } */
 
     setIsSaving(true)
     try {
@@ -227,7 +227,7 @@ export default function EditUserPage() {
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Edit User</h1>
               <p className="text-muted-foreground">
-                Update the user profile, title, department, office and block status.
+                Update the user profile, title, and department.
               </p>
             </div>
           </div>
@@ -361,7 +361,7 @@ export default function EditUserPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  {/* <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="country">Country or Region</Label>
                       <Input id="country" value={HARDCODED_COUNTRY_NAME} disabled readOnly />
@@ -381,7 +381,7 @@ export default function EditUserPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">

@@ -153,21 +153,21 @@ export default function DepartmentsPage() {
                     <TableHead>Department</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Head of Dept</TableHead>
-                    <TableHead>Staff</TableHead>
-                    <TableHead>Assets</TableHead>
+                    {/* <TableHead>Staff</TableHead>
+                    <TableHead>Assets</TableHead> */}
                     <TableHead className="w-12" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : filteredDepartments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">
                         No departments found
                       </TableCell>
                     </TableRow>
@@ -184,9 +184,9 @@ export default function DepartmentsPage() {
                             </div>
                             <div>
                               <p className="font-medium">{dept.name}</p>
-                              <p className="text-xs text-muted-foreground">
+                              {/* <p className="text-xs text-muted-foreground">
                                 Code: {dept.code ?? "—"}
-                              </p>
+                              </p> */}
                             </div>
                           </Link>
                         </TableCell>
@@ -199,8 +199,8 @@ export default function DepartmentsPage() {
                         <TableCell className="text-muted-foreground">
                           {dept.hod_name ?? "Not Assigned"}
                         </TableCell>
-                        <TableCell>—</TableCell>
-                        <TableCell>—</TableCell>
+                        {/* <TableCell>—</TableCell>
+                        <TableCell>—</TableCell> */}
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

@@ -81,6 +81,9 @@ export type UpdateAssetBody = {
   brand?: string | null
   model_name?: string | null
   serial_number?: string | null
+  asset_tag?: string | null
+  cost?: number | null
+  domain?: string | null
   status?: string
   location_id?: number | null
   department_id?: number | null

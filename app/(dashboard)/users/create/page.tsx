@@ -76,8 +76,7 @@ export default function AddUserPage() {
     Boolean(username.trim()) &&
     hasValidEmail &&
     hasMinPasswordLength &&
-    Boolean(roleId) &&
-    Boolean(office)
+    Boolean(roleId)
 
   const selectedRole = roles.find((r) => String(r.id) === roleId)
   const selectedDepartment = departments.find((d) => String(d.id) === departmentId)
@@ -98,6 +97,7 @@ export default function AddUserPage() {
       setRoles(roles)
       setDepartments(depts)
       setOfficeOptions(meta.office_options ?? [])
+      setOffice(meta.office_options?.[0]?.value ?? "")
       setDesignationOptions(meta.designation_options ?? [])
     } catch {
       if (controller.signal.aborted) return
@@ -105,6 +105,7 @@ export default function AddUserPage() {
       setRoles([])
       setDepartments([])
       setOfficeOptions([])
+      setOffice("")
       setDesignationOptions([])
     }
   }
@@ -167,7 +168,7 @@ export default function AddUserPage() {
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Add User</h1>
               <p className="text-muted-foreground">
-                Create a user with display name, title, department, office and status.
+                Create a user with display name, title, department and status.
               </p>
             </div>
           </div>
@@ -301,7 +302,7 @@ export default function AddUserPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  {/* <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="country">Country or Region *</Label>
                       <Input id="country" value={HARDCODED_COUNTRY_NAME} disabled readOnly />
@@ -321,7 +322,7 @@ export default function AddUserPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">

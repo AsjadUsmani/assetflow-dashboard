@@ -54,6 +54,9 @@ export function EditAssetClient() {
 
   const [hostName, setHostName] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
+  const [assetTag, setAssetTag] = useState("");
+  const [cost, setCost] = useState("");
+  const [domain, setDomain] = useState("");
   const [status, setStatus] = useState("available");
   const [locationId, setLocationId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -64,10 +67,10 @@ export function EditAssetClient() {
   const [expiryDate, setExpiryDate] = useState("");
   const [assignedDate, setAssignedDate] = useState("");
   const [usageType, setUsageType] = useState("");
+  const [impact, setImpact] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [remark, setRemark] = useState("");
   const [propertyValues, setPropertyValues] = useState<Record<string, string | number | boolean>>({});
-  const [processor, setProcessor] = useState("");
   const [modelName, setModelName] = useState("");
   const [currentTab, setCurrentTab] = useState(defaultTab);
 
@@ -75,6 +78,7 @@ export function EditAssetClient() {
     () => assetType?.properties?.filter((p) => p.is_required) ?? [],
     [assetType],
   );
+  const canSave = Boolean(asset) && !saving && Boolean(assignedUserId) && Boolean(managedByUserId);
 
   useEffect(() => {
     if (Number.isNaN(id)) {
@@ -101,6 +105,9 @@ export function EditAssetClient() {
         setUsers(usrs);
         setHostName(a.host_name ?? a.name);
         setSerialNumber(a.serial_number ?? "");
+        setAssetTag(a.asset_tag ?? "");
+        setCost(a.cost != null ? String(a.cost) : "");
+        setDomain(a.domain ?? "");
         setStatus(a.status);
         setLocationId(a.location_id ? String(a.location_id) : "");
         setDepartmentId(a.department_id ? String(a.department_id) : "");
@@ -111,6 +118,7 @@ export function EditAssetClient() {
         setExpiryDate(toDateInputValue(a.expiry_date));
         setAssignedDate(toDateInputValue(a.assigned_date));
         setUsageType(a.usage_type ?? "");
+        setImpact(a.impact ?? "");
         setReturnDate(toDateInputValue(a.return_date));
         setRemark(a.remark ?? "");
         const pv: Record<string, string | number | boolean> = {};
@@ -140,15 +148,6 @@ export function EditAssetClient() {
           });
         }
         setPropertyValues(Object.keys(normalizedByName).length > 0 ? normalizedByName : pv);
-        setProcessor(
-          String(
-            normalizedByName["Processor / CPU"] ??
-              normalizedByName["processor"] ??
-              pv["Processor / CPU"] ??
-              pv["processor"] ??
-              "",
-          ),
-        );
         setModelName(
           String(
             normalizedByName["Model"] ??
@@ -221,9 +220,7 @@ export function EditAssetClient() {
       delete pv["model"];
       delete pv["serial_number"];
       delete pv["processor"];
-      if (processor.trim()) {
-        pv["Processor / CPU"] = processor.trim();
-      }
+      delete pv["Processor / CPU"];
       if (serialNumber.trim()) {
         pv["Serial Number"] = serialNumber.trim();
       }
@@ -232,7 +229,11 @@ export function EditAssetClient() {
       }
       const body: UpdateAssetBody = {
         name: hostName.trim(),
+        host_name: hostName.trim(),
         serial_number: serialNumber.trim() || null,
+        asset_tag: assetTag.trim() || null,
+        cost: cost ? Number(cost) : null,
+        domain: domain.trim() || null,
         status,
         location_id: locationId ? Number(locationId) : null,
         department_id: departmentId ? Number(departmentId) : null,
@@ -243,6 +244,7 @@ export function EditAssetClient() {
         expiry_date: expiryDate || null,
         assigned_date: assignedDate || null,
         usage_type: usageType || null,
+        impact: impact || null,
         return_date: returnDate || null,
         remark: remark.trim() || null,
         property_values: Object.keys(pv).length > 0 ? pv : null,
@@ -318,13 +320,35 @@ export function EditAssetClient() {
                 <Input id="edit-serial" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} className="bg-secondary border-0" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-processor">Processor / CPU</Label>
+                <Label htmlFor="edit-asset-tag">Asset Tag</Label>
                 <Input
-                  id="edit-processor"
-                  value={processor}
-                  onChange={(e) => setProcessor(e.target.value)}
+                  id="edit-asset-tag"
+                  value={assetTag}
+                  onChange={(e) => setAssetTag(e.target.value)}
                   className="bg-secondary border-0"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cost">Cost</Label>
+                  <Input
+                    id="edit-cost"
+                    type="number"
+                    step="0.01"
+                    value={cost}
+                    onChange={(e) => setCost(e.target.value)}
+                    className="bg-secondary border-0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-domain">Domain</Label>
+                  <Input
+                    id="edit-domain"
+                    value={domain}
+                    onChange={(e) => setDomain(e.target.value)}
+                    className="bg-secondary border-0"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-model-name">Model Name</Label>
@@ -470,7 +494,7 @@ export function EditAssetClient() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Assign to User</Label>
+                <Label>Assigned To</Label>
                 <Select value={assignedUserId} onValueChange={setAssignedUserId}>
                   <SelectTrigger className="bg-secondary border-0">
                     <SelectValue placeholder="Select user" />
@@ -517,10 +541,23 @@ export function EditAssetClient() {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label>Impact</Label>
+                  <Select value={impact} onValueChange={setImpact}>
+                    <SelectTrigger className="bg-secondary border-0">
+                      <SelectValue placeholder="Select impact" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Low">Low</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="High">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
                   <Label>Return Date</Label>
                   <Input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className="bg-secondary border-0" />
                 </div>
-              </div>
               <div className="space-y-2">
                 <Label>Remark</Label>
                 <Input value={remark} onChange={(e) => setRemark(e.target.value)} className="bg-secondary border-0" />
@@ -541,7 +578,7 @@ export function EditAssetClient() {
             )}
             */}
             {currentTab === "assignment" && (
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={!canSave}>
                 {saving ? "Saving..." : "Save changes"}
               </Button>
             )}

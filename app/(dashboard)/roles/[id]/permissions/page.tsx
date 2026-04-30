@@ -214,53 +214,59 @@ export default function RolePermissionsPage() {
                       <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground">
                         {p.menu_path}
                       </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={p.is_allowed}
-                          onCheckedChange={(v) =>
-                            updatePermission(p.menu_id, "is_allowed", v)
-                          }
-                        />
+                       <TableCell>
+                         <Switch
+                           className="cursor-pointer"
+                           checked={p.is_allowed}
+                           onCheckedChange={(v) =>
+                             updatePermission(p.menu_id, "is_allowed", v)
+                           }
+                         />
                       </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={p.can_read}
-                          onCheckedChange={(v) =>
-                            updatePermission(p.menu_id, "can_read", v)
-                          }
-                        />
+                       <TableCell>
+                         <Switch
+                           className="cursor-pointer"
+                           checked={p.can_read}
+                           onCheckedChange={(v) =>
+                             updatePermission(p.menu_id, "can_read", v)
+                           }
+                         />
                       </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={p.can_create}
-                          onCheckedChange={(v) =>
-                            updatePermission(p.menu_id, "can_create", v)
-                          }
-                        />
+                       <TableCell>
+                         <Switch
+                           className="cursor-pointer"
+                           checked={p.can_create}
+                           onCheckedChange={(v) =>
+                             updatePermission(p.menu_id, "can_create", v)
+                           }
+                         />
                       </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={p.can_update}
-                          onCheckedChange={(v) =>
-                            updatePermission(p.menu_id, "can_update", v)
-                          }
-                        />
+                       <TableCell>
+                         <Switch
+                           className="cursor-pointer"
+                           checked={p.can_update}
+                           onCheckedChange={(v) =>
+                             updatePermission(p.menu_id, "can_update", v)
+                           }
+                         />
                       </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={p.can_delete}
-                          onCheckedChange={(v) =>
-                            updatePermission(p.menu_id, "can_delete", v)
-                          }
-                        />
+                       <TableCell>
+                         <Switch
+                           className="cursor-pointer"
+                           checked={p.can_delete}
+                           onCheckedChange={(v) =>
+                             updatePermission(p.menu_id, "can_delete", v)
+                           }
+                         />
                       </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={p.is_active}
-                          onCheckedChange={(v) =>
-                            updatePermission(p.menu_id, "is_active", v)
-                          }
-                        />
+                       <TableCell>
+                         <Switch
+                           className="cursor-pointer"
+                           checked={p.is_active}
+                           onCheckedChange={(v) =>
+                             updatePermission(p.menu_id, "is_active", v)
+                           }
+                         />
                       </TableCell>
                     </TableRow>
                   ))
@@ -288,4 +294,3 @@ export default function RolePermissionsPage() {
     </>
   )
 }
-
