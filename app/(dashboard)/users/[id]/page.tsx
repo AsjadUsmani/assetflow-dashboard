@@ -213,10 +213,10 @@ export default function UserDetailsPage() {
                   <Label>Designation</Label>
                   <Input value={user.designation_name ?? user.title ?? ""} readOnly disabled />
                 </div>
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label>City</Label>
                   <Input value={user.city ?? ""} readOnly disabled />
-                </div>
+                </div> */}
               </div>
 
               {/* <div className="grid gap-4 sm:grid-cols-2">

@@ -152,7 +152,7 @@ export default function DepartmentsPage() {
                   <TableRow>
                     <TableHead>Department</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead>Head of Dept</TableHead>
+                    {/* <TableHead>Head of Dept</TableHead> */}
                     {/* <TableHead>Staff</TableHead>
                     <TableHead>Assets</TableHead> */}
                     <TableHead className="w-12" />
@@ -196,9 +196,9 @@ export default function DepartmentsPage() {
                             <span>{dept.location_name ?? "—"}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        {/* <TableCell className="text-muted-foreground">
                           {dept.hod_name ?? "Not Assigned"}
-                        </TableCell>
+                        </TableCell> */}
                         {/* <TableCell>—</TableCell>
                         <TableCell>—</TableCell> */}
                         <TableCell>

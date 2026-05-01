@@ -197,7 +197,7 @@ export default function NewDepartmentPage() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label>Head of Department</Label>
                     <Select value={hodId} onValueChange={setHodId}>
                       <SelectTrigger>
@@ -212,7 +212,7 @@ export default function NewDepartmentPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div> */}
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Extension</Label>
                     <Input id="phone" placeholder="e.g., 969" />

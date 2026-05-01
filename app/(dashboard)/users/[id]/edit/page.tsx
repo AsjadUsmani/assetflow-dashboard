@@ -355,10 +355,10 @@ export default function EditUserPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                       <Label htmlFor="city">City</Label>
                       <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* <div className="grid gap-4 sm:grid-cols-2">

@@ -173,7 +173,7 @@ export default function DepartmentDetailPage({
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
+              {/* <div className="flex items-start gap-3">
                 <User className="mt-0.5 size-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Head of Department</p>
@@ -181,7 +181,7 @@ export default function DepartmentDetailPage({
                     {dept.hod_name ?? "Not Assigned"}
                   </p>
                 </div>
-              </div>
+              </div> */}
               <div className="flex items-start gap-3">
                 <Phone className="mt-0.5 size-4 text-muted-foreground" />
                 <div>

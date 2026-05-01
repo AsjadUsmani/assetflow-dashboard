@@ -14,6 +14,10 @@ import {
   ArrowLeft,
   MoreHorizontal,
   Trash2,
+  Globe,
+  FileText,
+  Hash,
+  Navigation,
 } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
@@ -42,6 +46,16 @@ import {
 } from "@/components/ui/table";
 import { getLocationById, deleteLocation, type Location } from "@/lib/services/locations";
 import { getDepartments, type Department } from "@/lib/services/departments";
+
+const COUNTRY_OPTIONS: Record<string, string> = {
+  us: "United States",
+  ca: "Canada",
+  uk: "United Kingdom",
+  au: "Australia",
+  de: "Germany",
+  fr: "France",
+  in: "India",
+};
 
 export default function LocationDetailPage({
   params,
@@ -201,7 +215,7 @@ export default function LocationDetailPage({
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            {/* <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Staff Members
@@ -213,7 +227,7 @@ export default function LocationDetailPage({
                   <span className="text-2xl font-bold">—</span>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -235,10 +249,34 @@ export default function LocationDetailPage({
                 <div className="flex items-start gap-3">
                   <MapPin className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">Address</p>
+                    <p className="text-sm font-medium">Street Address</p>
                     <p className="text-sm text-muted-foreground">{location.address}</p>
                   </div>
                 </div>
+                {(location.city || location.state || location.postal_code) && (
+                  <div className="flex items-start gap-3">
+                    <Navigation className="mt-0.5 size-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">City / State / Postal</p>
+                      <p className="text-sm text-muted-foreground">
+                        {[location.city, location.state, location.postal_code]
+                          .filter(Boolean)
+                          .join(", ") || "—"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {location.country_code && (
+                  <div className="flex items-start gap-3">
+                    <Globe className="mt-0.5 size-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Country</p>
+                      <p className="text-sm text-muted-foreground">
+                        {COUNTRY_OPTIONS[location.country_code] ?? location.country_code}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-start gap-3">
                   <Phone className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
@@ -253,6 +291,15 @@ export default function LocationDetailPage({
                     <p className="text-sm text-muted-foreground">{location.email ?? "—"}</p>
                   </div>
                 </div>
+                {location.notes && (
+                  <div className="flex items-start gap-3">
+                    <FileText className="mt-0.5 size-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Notes</p>
+                      <p className="text-sm text-muted-foreground">{location.notes}</p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-start gap-3">
                   <Calendar className="mt-0.5 size-4 text-muted-foreground" />
                   <div>
