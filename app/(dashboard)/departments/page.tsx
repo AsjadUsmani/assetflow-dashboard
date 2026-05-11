@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   FolderTree,
@@ -13,6 +13,10 @@ import {
   Users,
   Package,
   Eye,
+  FileDown,
+  Upload,
+  Download,
+  ChevronDown,
 } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
@@ -46,30 +50,34 @@ import {
   deleteDepartment,
   type Department,
 } from "@/lib/services/departments";
+import { apiService } from "@/lib/services/api-service";
+import { useToast } from "@/components/ui/use-toast";
+import { ImportCsvDialog } from "@/components/import-csv-dialog";
 
 export default function DepartmentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const loadDepartments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getDepartments();
+      setDepartments(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load departments");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    getDepartments()
-      .then((data) => {
-        if (!cancelled) setDepartments(data);
-      })
-      .catch((err) => {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : "Failed to load departments");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void loadDepartments();
+  }, [loadDepartments]);
 
   const filteredDepartments = departments.filter((dept) =>
     dept.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -86,7 +94,45 @@ export default function DepartmentsPage() {
     }
   };
 
-  if (error) {
+  const handleDownloadSampleCsv = useCallback(async () => {
+    try {
+      const blob = await apiService.getFile("/workspace/departments/sample-csv");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "departments-sample.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Download started", description: "departments-sample.csv" });
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    }
+  }, [toast]);
+
+  const handleExportCsv = useCallback(async () => {
+    try {
+      const blob = await apiService.getFile("/workspace/departments/export-csv");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "departments-export.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Export started", description: "departments-export.csv" });
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    }
+  }, [toast]);
+
+  if (error && !loading && departments.length === 0) {
     return (
       <>
         <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Departments" }]} />
@@ -116,13 +162,47 @@ export default function DepartmentsPage() {
                 Manage departments within locations
               </p>
             </div>
-            <Button asChild>
-              <Link href="/departments/new">
-                <Plus className="mr-2 size-4" />
-                Add Department
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    CSV
+                    <ChevronDown className="ml-2 size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleDownloadSampleCsv}>
+                    <FileDown className="mr-2 size-4" />
+                    Download sample CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                    <Upload className="mr-2 size-4" />
+                    Import from CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportCsv}>
+                    <Download className="mr-2 size-4" />
+                    Export to CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button asChild>
+                <Link href="/departments/new">
+                  <Plus className="mr-2 size-4" />
+                  Add Department
+                </Link>
+              </Button>
+            </div>
           </div>
+
+          <ImportCsvDialog
+            open={importDialogOpen}
+            onOpenChange={setImportDialogOpen}
+            endpoint="/workspace/departments/import-csv"
+            title="Import departments from CSV"
+            description="Upload a CSV with columns: location_name, name, phone_extension, email. Download sample CSV for exact format."
+            sampleFilename="departments-sample.csv"
+            onSuccess={loadDepartments}
+          />
 
           <Card>
             <CardHeader>

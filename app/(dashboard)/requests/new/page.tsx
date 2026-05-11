@@ -530,9 +530,7 @@ function NewRequestForm() {
                   </SelectTrigger>
                   <SelectContent>
                     {users.map((user) => {
-                      const name =
-                        [user.first_name, user.last_name].filter(Boolean).join(" ") ||
-                        user.username;
+                      const name = user.username;
                       return (
                         <SelectItem key={user.id} value={String(user.id)}>
                           {name} {user.email ? `(${user.email})` : ""}

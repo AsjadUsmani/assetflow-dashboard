@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Plus, Search, MoreHorizontal, Eye, Pencil, Trash2 } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Eye, Pencil, Trash2, FileDown, Upload, Download, ChevronDown } from "lucide-react"
 
 import { AppHeader } from "@/components/app-header"
 import { Button } from "@/components/ui/button"
@@ -40,6 +40,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { getDesignations, deleteDesignation, type Designation } from "@/lib/services/designations"
+import { apiService } from "@/lib/services/api-service"
+import { useToast } from "@/components/ui/use-toast"
+import { ImportCsvDialog } from "@/components/import-csv-dialog"
 
 export default function DesignationsPage() {
   const [items, setItems] = React.useState<Designation[]>([])
@@ -47,6 +50,8 @@ export default function DesignationsPage() {
   const [error, setError] = React.useState<string | null>(null)
   const [search, setSearch] = React.useState("")
   const [deleteTarget, setDeleteTarget] = React.useState<Designation | null>(null)
+  const [importDialogOpen, setImportDialogOpen] = React.useState(false)
+  const { toast } = useToast()
 
   const load = React.useCallback(async () => {
     setLoading(true)
@@ -76,6 +81,44 @@ export default function DesignationsPage() {
     }
   }
 
+  const handleDownloadSampleCsv = React.useCallback(async () => {
+    try {
+      const blob = await apiService.getFile("/workspace/designations/sample-csv")
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = "designations-sample.csv"
+      a.click()
+      URL.revokeObjectURL(url)
+      toast({ title: "Download started", description: "designations-sample.csv" })
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+      })
+    }
+  }, [toast])
+
+  const handleExportCsv = React.useCallback(async () => {
+    try {
+      const blob = await apiService.getFile("/workspace/designations/export-csv")
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = "designations-export.csv"
+      a.click()
+      URL.revokeObjectURL(url)
+      toast({ title: "Export started", description: "designations-export.csv" })
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+      })
+    }
+  }, [toast])
+
   const filtered = items.filter((item) =>
     `${item.name} ${item.code ?? ""} ${item.description ?? ""}`
       .toLowerCase()
@@ -100,13 +143,47 @@ export default function DesignationsPage() {
                 Manage designation master used in user and employee forms.
               </p>
             </div>
-            <Button asChild>
-              <Link href="/designations/create">
-                <Plus className="mr-2 size-4" />
-                Add Designation
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    CSV
+                    <ChevronDown className="ml-2 size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleDownloadSampleCsv}>
+                    <FileDown className="mr-2 size-4" />
+                    Download sample CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                    <Upload className="mr-2 size-4" />
+                    Import from CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportCsv}>
+                    <Download className="mr-2 size-4" />
+                    Export to CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button asChild>
+                <Link href="/designations/create">
+                  <Plus className="mr-2 size-4" />
+                  Add Designation
+                </Link>
+              </Button>
+            </div>
           </div>
+
+          <ImportCsvDialog
+            open={importDialogOpen}
+            onOpenChange={setImportDialogOpen}
+            endpoint="/workspace/designations/import-csv"
+            title="Import designations from CSV"
+            description="Upload a CSV with columns: name, code, description, is_active. Download sample CSV for exact format."
+            sampleFilename="designations-sample.csv"
+            onSuccess={load}
+          />
 
           <Card>
             <CardHeader>

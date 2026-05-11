@@ -76,6 +76,8 @@ export function AssetsFilters({
             <SelectItem value="available">Available</SelectItem>
             <SelectItem value="assigned">Assigned</SelectItem>
             <SelectItem value="in_maintenance">In Maintenance</SelectItem>
+            <SelectItem value="in_stock">In Stock</SelectItem>
+            <SelectItem value="in_use">In Use</SelectItem>
             <SelectItem value="retired">Retired</SelectItem>
             <SelectItem value="lost">Lost</SelectItem>
             <SelectItem value="pending_disposal">Pending for Disposal</SelectItem>

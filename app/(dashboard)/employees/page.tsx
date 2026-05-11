@@ -51,6 +51,7 @@ import {
   Mail,
   FileDown,
   Upload,
+  Download,
   ChevronDown,
 } from "lucide-react"
 import Link from "next/link"
@@ -155,6 +156,25 @@ export default function EmployeesPage() {
       toast({
         variant: "destructive",
         title: "Download failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+      })
+    }
+  }
+
+  const handleExportCsv = async () => {
+    try {
+      const blob = await apiService.getFile("/workspace/users/export-csv")
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = "employees-export.csv"
+      a.click()
+      URL.revokeObjectURL(url)
+      toast({ title: "Export started", description: "employees-export.csv" })
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Export failed",
         description: e instanceof Error ? e.message : "Unknown error",
       })
     }
@@ -316,6 +336,10 @@ export default function EmployeesPage() {
                           <Upload className="mr-2 size-4" />
                           Import from CSV
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportCsv}>
+                          <Download className="mr-2 size-4" />
+                          Export to CSV
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <Button asChild>
@@ -332,7 +356,7 @@ export default function EmployeesPage() {
                 onOpenChange={setImportDialogOpen}
                 endpoint="/workspace/users/import-csv"
                 title="Import employees from CSV"
-                description="Upload CSV with columns: Display name, Email Address, Title, Department, City, Country, Office, Block Credentials. Download sample CSV for exact format."
+                description="Upload CSV with columns: username, email, Role, department_name, designation_name, is_active. Download sample CSV for exact format."
                 sampleFilename="employees-sample.csv"
                 onSuccess={loadUsers}
               />

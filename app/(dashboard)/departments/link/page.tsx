@@ -220,10 +220,7 @@ export default function LinkUserDepartmentPage() {
                                   </span>
                                 </SelectItem>
                                 {activeUsersWithEmail.map(user => {
-                                  const name =
-                                    [user.first_name, user.last_name]
-                                      .filter(Boolean)
-                                      .join(" ") || user.username;
+                                  const name = user.username;
                                   return (
                                     <SelectItem key={user.id} value={String(user.id)}>
                                       <div className="flex items-center gap-2">

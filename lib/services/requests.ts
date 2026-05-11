@@ -10,6 +10,8 @@ export type AssetRequest = {
   asset_name: string | null
   from_location_name: string | null
   to_location_name: string | null
+  from_department_id: number | null
+  to_department_id: number | null
   requested_by_id: number
   requested_by_name: string
   to_user_id: number | null

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   MapPin,
@@ -11,6 +11,10 @@ import {
   Trash2,
   Building2,
   Eye,
+  FileDown,
+  Upload,
+  Download,
+  ChevronDown,
 } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
@@ -44,30 +48,34 @@ import {
   deleteLocation,
   type Location,
 } from "@/lib/services/locations";
+import { apiService } from "@/lib/services/api-service";
+import { useToast } from "@/components/ui/use-toast";
+import { ImportCsvDialog } from "@/components/import-csv-dialog";
 
 export default function LocationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const loadLocations = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getLocations();
+      setLocations(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load locations");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    getLocations()
-      .then((data) => {
-        if (!cancelled) setLocations(data);
-      })
-      .catch((err) => {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : "Failed to load locations");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void loadLocations();
+  }, [loadLocations]);
 
   const filteredLocations = locations.filter(
     (loc) =>
@@ -86,7 +94,45 @@ export default function LocationsPage() {
     }
   };
 
-  if (error) {
+  const handleDownloadSampleCsv = useCallback(async () => {
+    try {
+      const blob = await apiService.getFile("/workspace/locations/sample-csv");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "locations-sample.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Download started", description: "locations-sample.csv" });
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    }
+  }, [toast]);
+
+  const handleExportCsv = useCallback(async () => {
+    try {
+      const blob = await apiService.getFile("/workspace/locations/export-csv");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "locations-export.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Export started", description: "locations-export.csv" });
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    }
+  }, [toast]);
+
+  if (error && !loading && locations.length === 0) {
     return (
       <>
         <AppHeader breadcrumbs={[{ label: "Overview", href: "/dashboard" }, { label: "Locations" }]} />
@@ -116,13 +162,47 @@ export default function LocationsPage() {
                 Manage organization locations and branches
               </p>
             </div>
-            <Button asChild>
-              <Link href="/locations/new">
-                <Plus className="mr-2 size-4" />
-                Add Location
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    CSV
+                    <ChevronDown className="ml-2 size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleDownloadSampleCsv}>
+                    <FileDown className="mr-2 size-4" />
+                    Download sample CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                    <Upload className="mr-2 size-4" />
+                    Import from CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportCsv}>
+                    <Download className="mr-2 size-4" />
+                    Export to CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button asChild>
+                <Link href="/locations/new">
+                  <Plus className="mr-2 size-4" />
+                  Add Location
+                </Link>
+              </Button>
+            </div>
           </div>
+
+          <ImportCsvDialog
+            open={importDialogOpen}
+            onOpenChange={setImportDialogOpen}
+            endpoint="/workspace/locations/import-csv"
+            title="Import locations from CSV"
+            description="Upload a CSV with columns: organization_name, name, address, city, state, postal_code, country, phone, email, notes. Download sample CSV for exact format."
+            sampleFilename="locations-sample.csv"
+            onSuccess={loadLocations}
+          />
 
           <Card>
             <CardHeader>

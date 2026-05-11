@@ -117,6 +117,8 @@ export type LegacyAssetCategory =
 export type AssetStatus =
   | "available"
   | "assigned"
+  | "in_stock"
+  | "in_use"
   | "in_maintenance"
   | "retired"
   | "lost";
