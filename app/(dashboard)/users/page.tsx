@@ -270,8 +270,8 @@ export default function UsersPage() {
     roleFilter === "all"
       ? "All Roles"
       : roleOptions.find(
-          (roleName) => roleName.toLowerCase().replace(/\s+/g, "_") === roleFilter,
-        ) ?? "Role"
+        (roleName) => roleName.toLowerCase().replace(/\s+/g, "_") === roleFilter,
+      ) ?? "Role"
 
   return (
     <>
@@ -520,103 +520,103 @@ export default function UsersPage() {
                     </TableHeader>
                     <TableBody>
                       {filteredUsers.map((user) => {
-                  const roleKey = (user.role_name ?? "")
-                    .toLowerCase()
-                    .replace(/\s+/g, "_")
-                  const role = roleConfig[roleKey]
-                  const statusKey = user.is_active ? "active" : "inactive"
-                  const status = statusConfig[statusKey]
-                  const fullName = user.username || user.email || ""
-                  const initials = fullName
-                    .split(" ")
-                    .filter(Boolean)
-                    .map((n) => n[0])
-                    .join("")
+                        const roleKey = (user.role_name ?? "")
+                          .toLowerCase()
+                          .replace(/\s+/g, "_")
+                        const role = roleConfig[roleKey]
+                        const statusKey = user.is_active ? "active" : "inactive"
+                        const status = statusConfig[statusKey]
+                        const fullName = user.username || user.email || ""
+                        const initials = fullName
+                          .split(" ")
+                          .filter(Boolean)
+                          .map((n) => n[0])
+                          .join("")
 
-                  return (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="size-9">
-                            <AvatarFallback className="text-xs">
-                              {initials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{fullName}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {user.email ?? "—"}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {user.department_name ?? "—"}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={role?.color ?? fallbackRoleBadge.color}>
-                          {role?.label ?? user.role_name ?? "Unassigned"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={status.color}>
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {user.last_login
-                          ? new Date(user.last_login).toLocaleString()
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => router.push(`/users/${user.id}`)}
-                            >
-                              <Eye className="mr-2 size-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/users/${user.id}/edit`}>
-                                <Edit className="mr-2 size-4" />
-                                Edit User
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Key className="mr-2 size-4" />
-                              Reset Password
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Mail className="mr-2 size-4" />
-                              Send Email
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => {
-                                if (actionUserId === user.id) return
-                                void handleToggleSuspend(user)
-                              }}
-                            >
-                              <Ban className="mr-2 size-4" />
-                              {actionUserId === user.id
-                                ? "Updating..."
-                                : user.is_active
-                                  ? "Suspend User"
-                                  : "Activate User"}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
+                        return (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="size-9">
+                                  <AvatarFallback className="text-xs">
+                                    {initials}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-medium">{fullName}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {user.email ?? "—"}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {user.department_name ?? "—"}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className={role?.color ?? fallbackRoleBadge.color}>
+                                {role?.label ?? user.role_name ?? "Unassigned"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className={status.color}>
+                                {status.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {user.last_login
+                                ? new Date(user.last_login).toLocaleString()
+                                : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="size-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => router.push(`/users/${user.id}`)}
+                                  >
+                                    <Eye className="mr-2 size-4" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/users/${user.id}/edit`}>
+                                      <Edit className="mr-2 size-4" />
+                                      Edit User
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Key className="mr-2 size-4" />
+                                    Reset Password
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Mail className="mr-2 size-4" />
+                                    Send Email
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => {
+                                      if (actionUserId === user.id) return
+                                      void handleToggleSuspend(user)
+                                    }}
+                                  >
+                                    <Ban className="mr-2 size-4" />
+                                    {actionUserId === user.id
+                                      ? "Updating..."
+                                      : user.is_active
+                                        ? "Suspend User"
+                                        : "Activate User"}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </div>
