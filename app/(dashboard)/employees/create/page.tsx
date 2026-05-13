@@ -41,9 +41,9 @@ import { useToast } from "@/components/ui/use-toast"
 import { getDepartments, type Department } from "@/lib/services/departments"
 import {
   getWorkspaceUserMeta,
+  type CountryOption,
   type UserOfficeOption,
 } from "@/lib/services/workspace-users"
-const HARDCODED_COUNTRY_NAME = "India"
 
 export default function AddEmployeePage() {
   const router = useRouter()
@@ -51,6 +51,7 @@ export default function AddEmployeePage() {
   const [isLoading, setIsLoading] = React.useState(false)
   const [departments, setDepartments] = React.useState<Department[]>([])
   const [officeOptions, setOfficeOptions] = React.useState<UserOfficeOption[]>([])
+  const [countryOptions, setCountryOptions] = React.useState<CountryOption[]>([])
   const [designationOptions, setDesignationOptions] = React.useState<Array<{ id: number; name: string }>>([])
 
   const [username, setUsername] = React.useState("")
@@ -60,6 +61,7 @@ export default function AddEmployeePage() {
   const [city, setCity] = React.useState("")
   const [designationId, setDesignationId] = React.useState("")
   const [office, setOffice] = React.useState("")
+  const [countryId, setCountryId] = React.useState("")
   const [isActive, setIsActive] = React.useState(true)
 
   const hasValidEmail = /^\S+@\S+\.\S+$/.test(email.trim())
@@ -67,33 +69,43 @@ export default function AddEmployeePage() {
     !isLoading &&
     Boolean(username.trim()) &&
     hasValidEmail &&
-    Boolean(office)
+    Boolean(office) &&
+    Boolean(countryId)
 
   const selectedDepartment = departments.find((d) => String(d.id) === departmentId)
 
   React.useEffect(() => {
-  const controller = new AbortController()
+    const controller = new AbortController()
 
-  async function load() {
-    try {
-      const [depts, meta] = await Promise.all([
-        getDepartments(),
-        getWorkspaceUserMeta(),
-      ])
+    async function load() {
+      try {
+        const [depts, meta] = await Promise.all([
+          getDepartments(),
+          getWorkspaceUserMeta(),
+        ])
 
-      if (controller.signal.aborted) return
+        if (controller.signal.aborted) return
 
-      setDepartments(depts)
-      setOfficeOptions(meta.office_options ?? [])
-      setDesignationOptions(meta.designation_options ?? [])
-    } catch {
-      if (controller.signal.aborted) return
+        setDepartments(depts)
+        setOfficeOptions(meta.office_options ?? [])
+        setCountryOptions(meta.country_options ?? [])
+        setDesignationOptions(meta.designation_options ?? [])
 
-      setDepartments([])
-      setOfficeOptions([])
-      setDesignationOptions([])
+        const india = meta.country_options?.find((c) => c.name.toLowerCase() === "india")
+        if (india && !controller.signal.aborted) {
+          setCountryId(String(india.id))
+        } else if (meta.country_options?.[0] && !controller.signal.aborted) {
+          setCountryId(String(meta.country_options[0].id))
+        }
+      } catch {
+        if (controller.signal.aborted) return
+
+        setDepartments([])
+        setOfficeOptions([])
+        setCountryOptions([])
+        setDesignationOptions([])
+      }
     }
-  }
 
     void load()
     return () => controller.abort()
@@ -104,12 +116,11 @@ export default function AddEmployeePage() {
 
     setIsLoading(true)
     try {
-      await apiService.post("/workspace/users", {
-        username: username.trim(),
+      await apiService.post("/workspace/employees", {
+        display_name: username.trim(),
         email: email.trim() || null,
-        employee_mode: true,
         department_id: Number(departmentId) || null,
-        country_name: HARDCODED_COUNTRY_NAME,
+        country_id: Number(countryId) || null,
         city: city.trim() || null,
         designation_id: designationId ? Number(designationId) : null,
         office,
@@ -118,7 +129,7 @@ export default function AddEmployeePage() {
 
       toast({
         title: "Employee created",
-        description: "The employee has been added.",
+        description: "The employee directory record has been added.",
       })
       router.push("/employees")
     } catch (err) {
@@ -152,7 +163,7 @@ export default function AddEmployeePage() {
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Add Employee</h1>
               <p className="text-muted-foreground">
-                Create an employee with display name, title, department, office and status.
+                Create a directory employee record (no dashboard login). Fields map to the employee table.
               </p>
             </div>
           </div>
@@ -163,7 +174,7 @@ export default function AddEmployeePage() {
                 <CardHeader>
                   <CardTitle>Employee details</CardTitle>
                   <CardDescription>
-                    Capture the profile fields that are stored on the employee record.
+                    Display name is stored as display_name; first and last name are derived when saving if needed.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -188,15 +199,6 @@ export default function AddEmployeePage() {
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="role">Role *</Label>
-                      <Input
-                        id="role"
-                        value="Employee"
-                        disabled
-                        readOnly
-                      />
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="department">Department</Label>
                       <Popover open={departmentPopoverOpen} onOpenChange={setDepartmentPopoverOpen}>
@@ -238,9 +240,6 @@ export default function AddEmployeePage() {
                         </PopoverContent>
                       </Popover>
                     </div>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="designation">Designation</Label>
                       <Select value={designationId} onValueChange={setDesignationId}>
@@ -256,17 +255,31 @@ export default function AddEmployeePage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
-                      <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
-                    </div>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="country">Country or Region *</Label>
-                      <Input id="country" value={HARDCODED_COUNTRY_NAME} disabled readOnly />
+                      <Label htmlFor="city">City</Label>
+                      <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="country">Country or Region *</Label>
+                      <Select value={countryId} onValueChange={setCountryId}>
+                        <SelectTrigger id="country">
+                          <SelectValue placeholder="Select country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countryOptions.map((country) => (
+                            <SelectItem key={country.id} value={String(country.id)}>
+                              {country.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="office">Office *</Label>
                       <Select value={office} onValueChange={setOffice}>
@@ -282,22 +295,21 @@ export default function AddEmployeePage() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="isActive">Block</Label>
-                    <Select
-                      value={isActive ? "active" : "inactive"}
-                      onValueChange={(value) => setIsActive(value === "active")}
-                    >
-                      <SelectTrigger id="isActive">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Label htmlFor="isActive">Status</Label>
+                      <Select
+                        value={isActive ? "active" : "inactive"}
+                        onValueChange={(value) => setIsActive(value === "active")}
+                      >
+                        <SelectTrigger id="isActive">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

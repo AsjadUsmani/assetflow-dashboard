@@ -16,6 +16,7 @@ import { Loader2, Upload, FileSpreadsheet } from "lucide-react";
 
 export type ImportCsvResult = {
   created: number;
+  updated?: number;
   errors: { row: number; message: string }[];
 };
 
@@ -63,22 +64,30 @@ export function ImportCsvDialog({
     setResult(null);
     try {
       const res = await apiService.uploadFile<ImportCsvResult>(endpoint, file);
-      const data = res.data ?? { created: 0, errors: [] };
+      const data = res.data ?? { created: 0, updated: 0, errors: [] };
       setResult(data);
+      const updated = data.updated ?? 0;
+      const totalApplied = data.created + updated;
       if (data.errors.length === 0) {
         toast({
           title: "Import complete",
-          description: `${data.created} record(s) created.`,
+          description: `${totalApplied} row(s) applied (${data.created} created, ${updated} updated).`,
         });
         onSuccess?.();
-        if (data.created > 0) onOpenChange(false);
-      } else if (data.created > 0) {
+        if (totalApplied > 0) onOpenChange(false);
+      } else if (totalApplied > 0) {
         toast({
           title: "Import completed with errors",
-          description: `Created: ${data.created}. ${data.errors.length} row(s) had errors.`,
+          description: `Applied: ${totalApplied} (${data.created} created, ${updated} updated). ${data.errors.length} row(s) had errors.`,
           variant: "destructive",
         });
         onSuccess?.();
+      } else if (data.errors.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Import failed",
+          description: `${data.errors.length} row(s) failed. See details below.`,
+        });
       }
     } catch (e) {
       toast({

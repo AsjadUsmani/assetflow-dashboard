@@ -17,37 +17,17 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { apiService } from "@/lib/services/api-service"
 import { useToast } from "@/components/ui/use-toast"
-import { getDepartments, type Department } from "@/lib/services/departments"
 import {
-  getWorkspaceRoles,
   getWorkspaceUserMeta,
-  type CountryOption,
   type UserOfficeOption,
 } from "@/lib/services/workspace-users"
+import { getEmployeeById, type EmployeeDetail } from "@/lib/services/employees"
 
-type Role = { id: number; name: string }
-
-type Employee = {
-  id: number
-  username: string
-  email: string | null
-  role_id: number
-  role_name: string | null
-  department_id: number | null
-  department_name: string | null
-  country_id: number | null
-  country_name: string | null
-  city: string | null
-  title: string | null
-  designation_id: number | null
-  designation_name: string | null
-  office: "INDIA_HO" | "TRADITIONAL" | "VIP" | "INDIA_RO" | null
-  is_active: boolean
-  last_login: string | null
-  created_at?: string
-  updated_at?: string
+function primaryName(employee: EmployeeDetail): string {
+  const fromDisplay = employee.display_name?.trim()
+  if (fromDisplay) return fromDisplay
+  return [employee.first_name, employee.last_name].filter(Boolean).join(" ").trim() || employee.first_name
 }
 
 export default function EmployeeDetailsPage() {
@@ -56,10 +36,7 @@ export default function EmployeeDetailsPage() {
   const id = Number(params?.id)
 
   const [isLoading, setIsLoading] = React.useState(true)
-  const [employee, setEmployee] = React.useState<Employee | null>(null)
-  const [roles, setRoles] = React.useState<Role[]>([])
-  const [departments, setDepartments] = React.useState<Department[]>([])
-  const [countryOptions, setCountryOptions] = React.useState<CountryOption[]>([])
+  const [employee, setEmployee] = React.useState<EmployeeDetail | null>(null)
   const [officeOptions, setOfficeOptions] = React.useState<UserOfficeOption[]>([])
 
   React.useEffect(() => {
@@ -69,19 +46,14 @@ export default function EmployeeDetailsPage() {
     async function load() {
       setIsLoading(true)
       try {
-        const [userRes, rolesRes, depts, meta] = await Promise.all([
-          apiService.get<Employee>(`/workspace/users/${id}`),
-          getWorkspaceRoles(),
-          getDepartments(),
+        const [row, meta] = await Promise.all([
+          getEmployeeById(id),
           getWorkspaceUserMeta(),
         ])
 
         if (controller.signal.aborted) return
 
-        setEmployee(userRes.data ?? null)
-        setRoles(rolesRes)
-        setDepartments(depts)
-        setCountryOptions(meta.country_options ?? [])
+        setEmployee(row)
         setOfficeOptions(meta.office_options ?? [])
       } catch (err) {
         if (!controller.signal.aborted) {
@@ -100,19 +72,6 @@ export default function EmployeeDetailsPage() {
     void load()
     return () => controller.abort()
   }, [id, toast])
-
-  const roleName =
-    employee?.role_name ?? roles.find((role) => role.id === employee?.role_id)?.name ?? "-"
-
-  const selectedDepartment = departments.find((department) => department.id === employee?.department_id)
-  const departmentName = selectedDepartment
-    ? selectedDepartment.location_name
-      ? `${selectedDepartment.location_name} - ${selectedDepartment.name}`
-      : selectedDepartment.name
-    : employee?.department_name ?? "-"
-
-  const countryName =
-    employee?.country_name ?? countryOptions.find((country) => country.id === employee?.country_id)?.name ?? "-"
 
   const officeLabel =
     officeOptions.find((option) => option.value === employee?.office)?.label ??
@@ -173,7 +132,7 @@ export default function EmployeeDetailsPage() {
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Employee Details</h1>
               <p className="text-muted-foreground">
-                Read-only view of the current employee profile.
+                Directory record (no login). Profile fields match the employee table.
               </p>
             </div>
           </div>
@@ -182,14 +141,14 @@ export default function EmployeeDetailsPage() {
             <CardHeader>
               <CardTitle>Employee details</CardTitle>
               <CardDescription>
-                Profile information is shown here in read-only mode.
+                HR directory fields from the database, read-only in this view.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Display name</Label>
-                  <Input value={employee.username} readOnly disabled />
+                  <Input value={primaryName(employee)} readOnly disabled />
                 </div>
                 <div className="space-y-2">
                   <Label>Email address</Label>
@@ -199,19 +158,30 @@ export default function EmployeeDetailsPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Role</Label>
-                  <Input value={roleName} readOnly disabled />
+                  <Label>First name</Label>
+                  <Input value={employee.first_name} readOnly disabled />
                 </div>
                 <div className="space-y-2">
-                  <Label>Department</Label>
-                  <Input value={departmentName} readOnly disabled />
+                  <Label>Last name</Label>
+                  <Input value={employee.last_name ?? ""} readOnly disabled />
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
+                  <Label>Mobile</Label>
+                  <Input value={employee.mobile ?? ""} readOnly disabled />
+                </div>
+                <div className="space-y-2">
                   <Label>Designation</Label>
-                  <Input value={employee.designation_name ?? employee.title ?? ""} readOnly disabled />
+                  <Input value={employee.designation_name ?? ""} readOnly disabled />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Department</Label>
+                  <Input value={employee.department_name ?? ""} readOnly disabled />
                 </div>
                 <div className="space-y-2">
                   <Label>City</Label>
@@ -222,7 +192,7 @@ export default function EmployeeDetailsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Country or Region</Label>
-                  <Input value={countryName} readOnly disabled />
+                  <Input value={employee.country_name ?? ""} readOnly disabled />
                 </div>
                 <div className="space-y-2">
                   <Label>Office</Label>
@@ -238,14 +208,6 @@ export default function EmployeeDetailsPage() {
                       {employee.is_active ? "Active" : "Inactive"}
                     </Badge>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Last Login</Label>
-                  <Input
-                    value={employee.last_login ? new Date(employee.last_login).toLocaleString() : "Never"}
-                    readOnly
-                    disabled
-                  />
                 </div>
               </div>
 

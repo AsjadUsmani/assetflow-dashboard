@@ -127,10 +127,6 @@ type UserRow = {
   last_login: string | null
 }
 
-function isEmployeeRole(roleName: string | null): boolean {
-  return (roleName ?? "").trim().toLowerCase() === "employee"
-}
-
 export default function UsersPage() {
   const router = useRouter()
   const [users, setUsers] = React.useState<UserRow[]>([])
@@ -219,12 +215,7 @@ export default function UsersPage() {
     }
   }
 
-  const nonEmployeeUsers = React.useMemo(
-    () => users.filter((user) => !isEmployeeRole(user.role_name)),
-    [users],
-  )
-
-  const filteredUsers = nonEmployeeUsers.filter((user) => {
+  const filteredUsers = users.filter((user) => {
     const fullName = user.username || user.email || ""
     const matchesSearch =
       fullName.toLowerCase().includes(search.toLowerCase()) ||
@@ -237,18 +228,18 @@ export default function UsersPage() {
     return matchesSearch && matchesRole && matchesStatus
   })
 
-  const activeUsers = nonEmployeeUsers.filter((u) => u.is_active).length
-  const adminCount = nonEmployeeUsers.filter((u) =>
+  const activeUsers = users.filter((u) => u.is_active).length
+  const adminCount = users.filter((u) =>
     (u.role_name ?? "").toLowerCase().includes("admin"),
   ).length
   const now = new Date()
-  const activeNowCount = nonEmployeeUsers.filter((u) => {
+  const activeNowCount = users.filter((u) => {
     if (!u.last_login) return false
     const lastLogin = new Date(u.last_login)
     if (Number.isNaN(lastLogin.getTime())) return false
     return now.getTime() - lastLogin.getTime() <= 15 * 60 * 1000
   }).length
-  const loginsThisMonth = nonEmployeeUsers.filter((u) => {
+  const loginsThisMonth = users.filter((u) => {
     if (!u.last_login) return false
     const lastLogin = new Date(u.last_login)
     if (Number.isNaN(lastLogin.getTime())) return false
@@ -259,12 +250,12 @@ export default function UsersPage() {
   }).length
   const roleOptions = React.useMemo(() => {
     const uniq = new Set<string>()
-    for (const user of nonEmployeeUsers) {
+    for (const user of users) {
       const roleName = (user.role_name ?? "").trim()
       if (roleName) uniq.add(roleName)
     }
     return Array.from(uniq).sort((a, b) => a.localeCompare(b))
-  }, [nonEmployeeUsers])
+  }, [users])
 
   const selectedRoleLabel =
     roleFilter === "all"
@@ -341,7 +332,7 @@ export default function UsersPage() {
                   <Users className="size-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{nonEmployeeUsers.length}</div>
+                  <div className="text-2xl font-bold">{users.length}</div>
                   <p className="text-xs text-muted-foreground">
                     {activeUsers} currently active
                   </p>
@@ -432,7 +423,7 @@ export default function UsersPage() {
                 onOpenChange={setImportDialogOpen}
                 endpoint="/workspace/users/import-csv"
                 title="Import users from CSV"
-                description="Upload CSV with columns: username, email, Role, department_name, designation_name, is_active. Download sample CSV for exact format."
+                description="Upload CSV with columns: username, email, Role, department_name, designation_name, is_active. Emails are checked only against existing user accounts (not the HR employee directory). Download sample CSV for exact format."
                 sampleFilename="users-sample.csv"
                 onSuccess={loadUsers}
               />
