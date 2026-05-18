@@ -189,7 +189,7 @@ export function AssetsView() {
         (asset.asset_type_name ?? "").toLowerCase().includes(term) ||
         (asset.location_name ?? "").toLowerCase().includes(term) ||
         (asset.department_name ?? "").toLowerCase().includes(term) ||
-        (asset.assigned_to_name ?? "").toLowerCase().includes(term)
+        (asset.assigned_to_username ?? asset.assigned_to_name ?? "").toLowerCase().includes(term)
       );
     });
   }, [scopedAssets, filters.search]);
