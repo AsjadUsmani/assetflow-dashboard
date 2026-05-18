@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Popover,
   PopoverContent,
@@ -63,6 +64,7 @@ type User = {
   designation_name: string | null
   office: "INDIA_HO" | "TRADITIONAL" | "VIP" | "INDIA_RO" | null
   is_active: boolean
+  email_on_hold: boolean
 }
 
 export default function EditUserPage() {
@@ -89,6 +91,7 @@ export default function EditUserPage() {
   const [designationId, setDesignationId] = React.useState("")
   const [office, setOffice] = React.useState("")
   const [isActive, setIsActive] = React.useState(true)
+  const [emailOnHold, setEmailOnHold] = React.useState(false)
 
   const selectedRole = roles.find((r) => String(r.id) === roleId)
   const selectedDepartment = departments.find((d) => String(d.id) === departmentId)
@@ -118,6 +121,7 @@ export default function EditUserPage() {
           setDesignationId(user.designation_id ? String(user.designation_id) : "")
           setOffice(user.office ?? "")
           setIsActive(user.is_active)
+          setEmailOnHold(user.email_on_hold ?? false)
         }
 
         setRoles(rolesRes.data ?? [])
@@ -170,6 +174,7 @@ export default function EditUserPage() {
         designation_id: designationId ? Number(designationId) : null,
         office,
         is_active: isActive,
+        email_on_hold: emailOnHold,
       }
       if (password.trim()) payload.password = password.trim()
 
@@ -396,20 +401,37 @@ export default function EditUserPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="isActive">Block</Label>
-                    <Select
-                      value={isActive ? "active" : "inactive"}
-                      onValueChange={(value) => setIsActive(value === "active")}
-                    >
-                      <SelectTrigger id="isActive">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="isActive">Account status</Label>
+                      <Select
+                        value={isActive ? "active" : "inactive"}
+                        onValueChange={(value) => setIsActive(value === "active")}
+                      >
+                        <SelectTrigger id="isActive">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive (Terminate)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        id="emailOnHold"
+                        checked={emailOnHold}
+                        onCheckedChange={(checked) => setEmailOnHold(!!checked)}
+                      />
+                      <div className="space-y-1">
+                        <Label htmlFor="emailOnHold" className="font-normal cursor-pointer">
+                          Hold
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Keep this user&apos;s email assignable on assets after they leave (transferable).
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

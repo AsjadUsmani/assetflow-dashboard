@@ -34,8 +34,6 @@ export type Asset = {
   assigned_date: string | null
   assignment_type: string | null
   usage_type: string | null
-  assignment_state: string | null
-  email_on_hold?: boolean
   impact: string | null
   return_date: string | null
   remark: string | null
@@ -71,8 +69,6 @@ export type CreateAssetBody = {
   expiry_date?: string
   assigned_date?: string
   assignment_type?: string
-  assignment_state?: string
-  email_on_hold?: boolean
   return_date?: string
   remark?: string
   property_values?: Record<string, unknown>
@@ -97,8 +93,6 @@ export type UpdateAssetBody = {
   expiry_date?: string | null
   assigned_date?: string | null
   assignment_type?: string | null
-  assignment_state?: string | null
-  email_on_hold?: boolean
   return_date?: string | null
   remark?: string | null
   property_values?: Record<string, unknown> | null

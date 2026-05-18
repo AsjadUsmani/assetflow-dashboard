@@ -14,6 +14,7 @@ export type WorkspaceUser = {
   city: string | null
   office: "INDIA_HO" | "TRADITIONAL" | "VIP" | "INDIA_RO" | null
   is_active: boolean
+  email_on_hold: boolean
   last_login: string | null
 }
 

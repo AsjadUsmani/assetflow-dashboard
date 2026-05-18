@@ -7,30 +7,8 @@ import { AppHeader } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Search } from "lucide-react";
 import { getAssetById, updateAsset, type Asset, type UpdateAssetBody } from "@/lib/services/assets";
 import { getAssetTypeById } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
@@ -81,12 +59,7 @@ export function EditAssetClient() {
   const [expiryDate, setExpiryDate] = useState("");
   const [assignedDate, setAssignedDate] = useState("");
   const [assignmentType, setAssignmentType] = useState("");
-  const [assignmentState, setAssignmentState] = useState("active");
-  const [emailOnHold, setEmailOnHold] = useState(false);
   const [returnDate, setReturnDate] = useState("");
-  const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
-  const [departmentPopoverOpen, setDepartmentPopoverOpen] = useState(false);
-  const [assignedUserPopoverOpen, setAssignedUserPopoverOpen] = useState(false);
   const [remark, setRemark] = useState("");
   const [propertyValues, setPropertyValues] = useState<Record<string, string | number | boolean>>({});
   const [modelName, setModelName] = useState("");
@@ -99,10 +72,7 @@ export function EditAssetClient() {
   const filteredDepartments = locationId
     ? departments.filter((d) => String(d.location_id) === locationId)
     : departments;
-  const assignableUsers = users.filter((u) => u.is_active || emailOnHold);
-  const selectedLocation = locations.find((loc) => String(loc.id) === locationId);
-  const selectedDepartment = filteredDepartments.find((dept) => String(dept.id) === departmentId);
-  const selectedAssignedUser = users.find((user) => String(user.id) === assignedUserId);
+  const assignableUsers = users.filter((u) => u.is_active || u.email_on_hold);
   const canSave = Boolean(asset) && !saving && Boolean(assignedUserId);
 
   useEffect(() => {
@@ -142,8 +112,6 @@ export function EditAssetClient() {
         setExpiryDate(toDateInputValue(a.expiry_date));
         setAssignedDate(toDateInputValue(a.assigned_date));
         setAssignmentType(a.assignment_type ?? a.usage_type ?? "");
-        setAssignmentState(a.assignment_state ?? "active");
-        setEmailOnHold(Boolean(a.email_on_hold));
         setReturnDate(toDateInputValue(a.return_date));
         setRemark(a.remark ?? "");
         const pv: Record<string, string | number | boolean> = {};
@@ -187,42 +155,11 @@ export function EditAssetClient() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const setPropertyValue = (propName: string, value: string | number | boolean) => {
-    setPropertyValues((prev) => ({ ...prev, [propName]: value }));
-  };
-
-  const hasPropertyValue = (prop: AssetType["properties"][number]): boolean => {
-    const value = propertyValues[prop.name];
-    if ((prop.data_type ?? "text") === "boolean") {
-      return typeof value === "boolean";
-    }
-    return value !== undefined && value !== null && value !== "";
-  };
-
-  const validateRequiredProperties = (): boolean => {
-    for (const prop of requiredProperties) {
-      if (!hasPropertyValue(prop)) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const canContinueFromProperties = validateRequiredProperties();
-
   const handleContinueFromBasic = () => {
     if (!hostName.trim()) {
       setError("Host name is required");
       return;
     }
-    setError(null);
-    // Temporary: skipping Properties tab
-    // setCurrentTab("properties");
-    setCurrentTab("assignment");
-  };
-
-  const handleContinueFromProperties = () => {
-    if (!canContinueFromProperties) return;
     setError(null);
     setCurrentTab("assignment");
   };
@@ -230,11 +167,6 @@ export function EditAssetClient() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!asset) return;
-    // Properties step is temporarily disabled.
-    // if (!validateRequiredProperties()) {
-    //   setCurrentTab("properties");
-    //   return;
-    // }
     setError(null);
     setSaving(true);
     try {
@@ -268,8 +200,6 @@ export function EditAssetClient() {
         expiry_date: expiryDate || null,
         assigned_date: assignedDate || null,
         assignment_type: assignmentType || null,
-        assignment_state: assignmentState || null,
-        email_on_hold: emailOnHold,
         return_date: returnDate || null,
         remark: remark.trim() || null,
         property_values: Object.keys(pv).length > 0 ? pv : null,
@@ -322,13 +252,6 @@ export function EditAssetClient() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            {/* Original:
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="properties">Properties</TabsTrigger>
-              <TabsTrigger value="assignment">Assignment</TabsTrigger>
-            </TabsList>
-            */}
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="assignment">Assignment</TabsTrigger>
@@ -353,7 +276,7 @@ export function EditAssetClient() {
                   className="bg-secondary border-0"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="edit-cost">Cost</Label>
                   <Input
@@ -384,7 +307,7 @@ export function EditAssetClient() {
                   className="bg-secondary border-0"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Purchase Date</Label>
                   <Input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className="bg-secondary border-0" />
@@ -401,80 +324,7 @@ export function EditAssetClient() {
                 )}
               </div>
             </TabsContent>
-            {/* <TabsContent value="properties" className="space-y-4 mt-4">
-              {assetType?.properties?.length ? (
-                <div className="space-y-4">
-                  {assetType.properties.map((prop) => {
-                    const dataType = prop.data_type ?? "text";
-                    const value = propertyValues[prop.name];
-                    const options = Array.isArray(prop.config?.options) ? (prop.config.options as string[]) : [];
-                    return (
-                      <div key={prop.id} className="space-y-2">
-                        <Label
-                          htmlFor={`edit-prop-${prop.id}`}
-                        >
-                          {prop.name}
-                          {prop.is_required && <span className="text-destructive"> *</span>}
-                        </Label>
-                        {dataType === "boolean" ? (
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              id={`edit-prop-${prop.id}`}
-                              checked={value === true}
-                              onCheckedChange={(checked) => setPropertyValue(prop.name, !!checked)}
-                            />
-                            <span className="text-sm text-muted-foreground">Yes</span>
-                          </div>
-                        ) : dataType === "dropdown" && options.length > 0 ? (
-                          <Select
-                            value={typeof value === "string" ? value : ""}
-                            onValueChange={(v) => setPropertyValue(prop.name, v)}
-                          >
-                            <SelectTrigger id={`edit-prop-${prop.id}`} className="bg-secondary border-0">
-                              <SelectValue placeholder={`Select ${prop.name}`} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {options.map((opt) => (
-                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : dataType === "number" ? (
-                          <Input
-                            id={`edit-prop-${prop.id}`}
-                            type="number"
-                            className="bg-secondary border-0"
-                            value={value !== undefined && value !== "" ? String(value) : ""}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setPropertyValue(prop.name, v === "" ? "" : Number(v));
-                            }}
-                          />
-                        ) : dataType === "date" ? (
-                          <Input
-                            id={`edit-prop-${prop.id}`}
-                            type="date"
-                            className="bg-secondary border-0"
-                            value={typeof value === "string" ? value : ""}
-                            onChange={(e) => setPropertyValue(prop.name, e.target.value)}
-                          />
-                        ) : (
-                          <Input
-                            id={`edit-prop-${prop.id}`}
-                            className="bg-secondary border-0"
-                            value={typeof value === "string" || typeof value === "number" ? String(value) : ""}
-                            onChange={(e) => setPropertyValue(prop.name, e.target.value)}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No properties for this asset type.</p>
-              )}
-            </TabsContent> */}
-            <TabsContent value="assignment" className="space-y-4 mt-4">
+            <TabsContent value="assignment" className="mt-6 space-y-5 pt-1">
               <div className="space-y-2">
                 <Label>Status</Label>
                 <SearchableSelect
@@ -495,94 +345,69 @@ export function EditAssetClient() {
                   ]}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Location</Label>
-                <Select value={locationId} onValueChange={setLocationId}>
-                  <SelectTrigger className="bg-secondary border-0">
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((loc) => (
-                      <SelectItem key={loc.id} value={String(loc.id)}>{loc.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Select value={departmentId} onValueChange={setDepartmentId}>
-                  <SelectTrigger className="bg-secondary border-0">
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredDepartments.map((dept) => (
-                      <SelectItem key={dept.id} value={String(dept.id)}>{dept.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Assigned To</Label>
-                <Select value={assignedUserId} onValueChange={setAssignedUserId}>
-                  <SelectTrigger className="bg-secondary border-0">
-                    <SelectValue placeholder="Select user" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assignableUsers.map((user) => (
-                      <SelectItem key={user.id} value={String(user.id)}>
-                        {user.username}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Assigned Date</Label>
-                <Input type="date" value={assignedDate} onChange={(e) => setAssignedDate(e.target.value)} className="bg-secondary border-0" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div className="space-y-2 min-w-0">
+                  <Label>Location</Label>
+                  <SearchableSelect
+                    value={locationId}
+                    onValueChange={(v) => {
+                      setLocationId(v);
+                      setDepartmentId("");
+                    }}
+                    placeholder="Search or select location"
+                    searchPlaceholder="Search locations..."
+                    options={locations.map((loc) => ({ value: String(loc.id), label: loc.name }))}
+                  />
+                </div>
+                <div className="space-y-2 min-w-0">
+                  <Label>Department</Label>
+                  <SearchableSelect
+                    value={departmentId}
+                    onValueChange={setDepartmentId}
+                    placeholder="Search or select department"
+                    searchPlaceholder="Search departments..."
+                    options={filteredDepartments.map((d) => ({ value: String(d.id), label: d.name }))}
+                  />
+                </div>
+                <div className="space-y-2 min-w-0 sm:col-span-2">
+                  <Label>Assigned To</Label>
+                  <SearchableSelect
+                    value={assignedUserId}
+                    onValueChange={setAssignedUserId}
+                    placeholder="Search or select user"
+                    searchPlaceholder="Search by username or email..."
+                    options={assignableUsers.map((user) => ({
+                      value: String(user.id),
+                      label: `${user.username}${!user.is_active ? " (inactive)" : ""}${user.email_on_hold ? " · hold" : ""}`,
+                      searchValue: `${user.username} ${user.email ?? ""}`,
+                    }))}
+                  />
+                </div>
+                <div className="space-y-2 min-w-0">
+                  <Label>Assigned Date</Label>
+                  <Input type="date" value={assignedDate} onChange={(e) => setAssignedDate(e.target.value)} className="bg-secondary border-0" />
+                </div>
+                <div className="space-y-2 min-w-0">
                   <Label>Assignment Type</Label>
                   <SearchableSelect
                     value={assignmentType}
                     onValueChange={setAssignmentType}
                     placeholder="Permanent or Loaner"
+                    searchPlaceholder="Search..."
                     options={[
                       { value: "Permanent", label: "Permanent" },
                       { value: "Loaner", label: "Loaner" },
                     ]}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Assignment State</Label>
-                  <SearchableSelect
-                    value={assignmentState}
-                    onValueChange={setAssignmentState}
-                    placeholder="Active or Inactive"
-                    options={[
-                      { value: "active", label: "Active" },
-                      { value: "inactive", label: "Inactive (Terminate)" },
-                    ]}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="edit-email-on-hold"
-                  checked={emailOnHold}
-                  onCheckedChange={(checked) => setEmailOnHold(!!checked)}
-                />
-                <Label htmlFor="edit-email-on-hold" className="font-normal cursor-pointer">
-                  Hold — keep assignee email usable after the user has left
-                </Label>
-              </div>
-              <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label>Return Date</Label>
                   <Input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className="bg-secondary border-0" />
                 </div>
-              <div className="space-y-2">
-                <Label>Remark</Label>
-                <Input value={remark} onChange={(e) => setRemark(e.target.value)} className="bg-secondary border-0" />
+                <div className="space-y-2 min-w-0 sm:col-span-2">
+                  <Label>Remark</Label>
+                  <Input value={remark} onChange={(e) => setRemark(e.target.value)} className="bg-secondary border-0" />
+                </div>
               </div>
             </TabsContent>
           </Tabs>
@@ -592,13 +417,6 @@ export function EditAssetClient() {
                 Continue
               </Button>
             )}
-            {/* Original:
-            {currentTab === "properties" && (
-              <Button type="button" onClick={handleContinueFromProperties} disabled={!canContinueFromProperties}>
-                Continue
-              </Button>
-            )}
-            */}
             {currentTab === "assignment" && (
               <Button type="submit" disabled={!canSave}>
                 {saving ? "Saving..." : "Save changes"}

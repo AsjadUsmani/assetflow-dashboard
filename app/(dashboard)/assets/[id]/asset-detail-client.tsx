@@ -211,8 +211,6 @@ export function AssetDetailClient() {
                 <p>Expiry: {formatDate(asset.expiry_date)}</p>
                 <p>Return date: {formatDate(asset.return_date)}</p>
                 <p>Assignment type: {asset.assignment_type ?? asset.usage_type ?? "-"}</p>
-                <p>Assignment state: {asset.assignment_state === "inactive" ? "Inactive" : "Active"}</p>
-                <p>Email on hold: {asset.email_on_hold ? "Yes" : "No"}</p>
               </CardContent>
             </Card>
           </div>
