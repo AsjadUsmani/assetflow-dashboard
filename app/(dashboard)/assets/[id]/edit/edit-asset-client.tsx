@@ -16,6 +16,21 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Search } from "lucide-react";
 import { getAssetById, updateAsset, type Asset, type UpdateAssetBody } from "@/lib/services/assets";
 import { getAssetTypeById } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
@@ -61,14 +76,17 @@ export function EditAssetClient() {
   const [locationId, setLocationId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [assignedUserId, setAssignedUserId] = useState("");
-  const [managedByUserId, setManagedByUserId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [assignedDate, setAssignedDate] = useState("");
-  const [usageType, setUsageType] = useState("");
-  const [impact, setImpact] = useState("");
+  const [assignmentType, setAssignmentType] = useState("");
+  const [assignmentState, setAssignmentState] = useState("active");
+  const [emailOnHold, setEmailOnHold] = useState(false);
   const [returnDate, setReturnDate] = useState("");
+  const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
+  const [departmentPopoverOpen, setDepartmentPopoverOpen] = useState(false);
+  const [assignedUserPopoverOpen, setAssignedUserPopoverOpen] = useState(false);
   const [remark, setRemark] = useState("");
   const [propertyValues, setPropertyValues] = useState<Record<string, string | number | boolean>>({});
   const [modelName, setModelName] = useState("");
@@ -78,7 +96,14 @@ export function EditAssetClient() {
     () => assetType?.properties?.filter((p) => p.is_required) ?? [],
     [assetType],
   );
-  const canSave = Boolean(asset) && !saving && Boolean(assignedUserId) && Boolean(managedByUserId);
+  const filteredDepartments = locationId
+    ? departments.filter((d) => String(d.location_id) === locationId)
+    : departments;
+  const assignableUsers = users.filter((u) => u.is_active || emailOnHold);
+  const selectedLocation = locations.find((loc) => String(loc.id) === locationId);
+  const selectedDepartment = filteredDepartments.find((dept) => String(dept.id) === departmentId);
+  const selectedAssignedUser = users.find((user) => String(user.id) === assignedUserId);
+  const canSave = Boolean(asset) && !saving && Boolean(assignedUserId);
 
   useEffect(() => {
     if (Number.isNaN(id)) {
@@ -112,13 +137,13 @@ export function EditAssetClient() {
         setLocationId(a.location_id ? String(a.location_id) : "");
         setDepartmentId(a.department_id ? String(a.department_id) : "");
         setAssignedUserId(a.assigned_to_user_id ? String(a.assigned_to_user_id) : "");
-        setManagedByUserId(a.managed_by_user_id ? String(a.managed_by_user_id) : "");
         setPurchaseDate(toDateInputValue(a.purchase_date));
         setWarrantyEndDate(toDateInputValue(a.warranty_end_date));
         setExpiryDate(toDateInputValue(a.expiry_date));
         setAssignedDate(toDateInputValue(a.assigned_date));
-        setUsageType(a.usage_type ?? "");
-        setImpact(a.impact ?? "");
+        setAssignmentType(a.assignment_type ?? a.usage_type ?? "");
+        setAssignmentState(a.assignment_state ?? "active");
+        setEmailOnHold(Boolean(a.email_on_hold));
         setReturnDate(toDateInputValue(a.return_date));
         setRemark(a.remark ?? "");
         const pv: Record<string, string | number | boolean> = {};
@@ -238,13 +263,13 @@ export function EditAssetClient() {
         location_id: locationId ? Number(locationId) : null,
         department_id: departmentId ? Number(departmentId) : null,
         assigned_to_user_id: assignedUserId ? Number(assignedUserId) : null,
-        managed_by_user_id: managedByUserId ? Number(managedByUserId) : null,
         purchase_date: purchaseDate || null,
         warranty_end_date: warrantyEndDate || null,
         expiry_date: expiryDate || null,
         assigned_date: assignedDate || null,
-        usage_type: usageType || null,
-        impact: impact || null,
+        assignment_type: assignmentType || null,
+        assignment_state: assignmentState || null,
+        email_on_hold: emailOnHold,
         return_date: returnDate || null,
         remark: remark.trim() || null,
         property_values: Object.keys(pv).length > 0 ? pv : null,
@@ -359,25 +384,6 @@ export function EditAssetClient() {
                   className="bg-secondary border-0"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="bg-secondary border-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="in_maintenance">In Maintenance</SelectItem>
-                    <SelectItem value="in_stock">In Stock</SelectItem>
-                    <SelectItem value="in_use">In Use</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                    <SelectItem value="lost">Lost</SelectItem>
-                    <SelectItem value="pending_disposal">Pending for Disposal</SelectItem>
-                    <SelectItem value="disposed">Disposed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Purchase Date</Label>
@@ -470,6 +476,26 @@ export function EditAssetClient() {
             </TabsContent> */}
             <TabsContent value="assignment" className="space-y-4 mt-4">
               <div className="space-y-2">
+                <Label>Status</Label>
+                <SearchableSelect
+                  value={status}
+                  onValueChange={setStatus}
+                  placeholder="Select status"
+                  searchPlaceholder="Search status..."
+                  options={[
+                    { value: "available", label: "Available" },
+                    { value: "assigned", label: "Assigned" },
+                    { value: "in_maintenance", label: "In Maintenance" },
+                    { value: "in_stock", label: "In Stock" },
+                    { value: "in_use", label: "In Use" },
+                    { value: "retired", label: "Retired" },
+                    { value: "lost", label: "Lost" },
+                    { value: "pending_disposal", label: "Pending for Disposal" },
+                    { value: "disposed", label: "Disposed" },
+                  ]}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>Location</Label>
                 <Select value={locationId} onValueChange={setLocationId}>
                   <SelectTrigger className="bg-secondary border-0">
@@ -489,7 +515,7 @@ export function EditAssetClient() {
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {departments.map((dept) => (
+                    {filteredDepartments.map((dept) => (
                       <SelectItem key={dept.id} value={String(dept.id)}>{dept.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -502,22 +528,7 @@ export function EditAssetClient() {
                     <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.filter((u) => u.is_active).map((user) => (
-                      <SelectItem key={user.id} value={String(user.id)}>
-                        {user.username}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Managed By</Label>
-                <Select value={managedByUserId} onValueChange={setManagedByUserId}>
-                  <SelectTrigger className="bg-secondary border-0">
-                    <SelectValue placeholder="Select user" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.filter((u) => u.is_active).map((user) => (
+                    {assignableUsers.map((user) => (
                       <SelectItem key={user.id} value={String(user.id)}>
                         {user.username}
                       </SelectItem>
@@ -531,30 +542,39 @@ export function EditAssetClient() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Usage Type</Label>
-                  <Select value={usageType} onValueChange={setUsageType}>
-                    <SelectTrigger className="bg-secondary border-0">
-                      <SelectValue placeholder="Select usage type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Permanent">Permanent</SelectItem>
-                      <SelectItem value="Loaner">Loaner</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Assignment Type</Label>
+                  <SearchableSelect
+                    value={assignmentType}
+                    onValueChange={setAssignmentType}
+                    placeholder="Permanent or Loaner"
+                    options={[
+                      { value: "Permanent", label: "Permanent" },
+                      { value: "Loaner", label: "Loaner" },
+                    ]}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label>Impact</Label>
-                  <Select value={impact} onValueChange={setImpact}>
-                    <SelectTrigger className="bg-secondary border-0">
-                      <SelectValue placeholder="Select impact" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Low">Low</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="High">High</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Assignment State</Label>
+                  <SearchableSelect
+                    value={assignmentState}
+                    onValueChange={setAssignmentState}
+                    placeholder="Active or Inactive"
+                    options={[
+                      { value: "active", label: "Active" },
+                      { value: "inactive", label: "Inactive (Terminate)" },
+                    ]}
+                  />
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="edit-email-on-hold"
+                  checked={emailOnHold}
+                  onCheckedChange={(checked) => setEmailOnHold(!!checked)}
+                />
+                <Label htmlFor="edit-email-on-hold" className="font-normal cursor-pointer">
+                  Hold — keep assignee email usable after the user has left
+                </Label>
               </div>
               <div className="space-y-2">
                   <Label>Return Date</Label>

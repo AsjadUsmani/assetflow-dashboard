@@ -21,6 +21,7 @@ export type Asset = {
   department_name: string | null
   assigned_to_user_id: number | null
   assigned_to_name: string | null
+  assigned_to_username: string | null
   managed_by_user_id: number | null
   managed_by_user_name: string | null
   created_by_user_id: number | null
@@ -31,7 +32,10 @@ export type Asset = {
   warranty_end_date: string | null
   expiry_date: string | null
   assigned_date: string | null
+  assignment_type: string | null
   usage_type: string | null
+  assignment_state: string | null
+  email_on_hold?: boolean
   impact: string | null
   return_date: string | null
   remark: string | null
@@ -62,13 +66,13 @@ export type CreateAssetBody = {
   location_id?: number
   department_id?: number
   assigned_to_user_id?: number
-  managed_by_user_id?: number
   purchase_date?: string
   warranty_end_date?: string
   expiry_date?: string
   assigned_date?: string
-  usage_type?: string
-  impact?: string
+  assignment_type?: string
+  assignment_state?: string
+  email_on_hold?: boolean
   return_date?: string
   remark?: string
   property_values?: Record<string, unknown>
@@ -88,13 +92,13 @@ export type UpdateAssetBody = {
   location_id?: number | null
   department_id?: number | null
   assigned_to_user_id?: number | null
-  managed_by_user_id?: number | null
   purchase_date?: string | null
   warranty_end_date?: string | null
   expiry_date?: string | null
   assigned_date?: string | null
-  usage_type?: string | null
-  impact?: string | null
+  assignment_type?: string | null
+  assignment_state?: string | null
+  email_on_hold?: boolean
   return_date?: string | null
   remark?: string | null
   property_values?: Record<string, unknown> | null

@@ -167,7 +167,7 @@ export function AssetsTable({
                       {asset.department_name ?? "-"}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {asset.assigned_to_name ?? "-"}
+                      {asset.assigned_to_username ?? asset.assigned_to_name ?? "-"}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

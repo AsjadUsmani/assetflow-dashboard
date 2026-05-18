@@ -4,13 +4,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import type { AssetsFiltersState } from "./assets-view";
 import type { AssetType } from "@/lib/services/asset-types";
@@ -63,81 +57,59 @@ export function AssetsFilters({
           />
         </div>
 
-        <Select
-          value={filters.status}
-          onValueChange={(value) =>
-            onFiltersChange((prev) => ({ ...prev, status: value }))
-          }
-        >
-          <SelectTrigger className="w-36 bg-secondary border-0">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="available">Available</SelectItem>
-            <SelectItem value="assigned">Assigned</SelectItem>
-            <SelectItem value="in_maintenance">In Maintenance</SelectItem>
-            <SelectItem value="in_stock">In Stock</SelectItem>
-            <SelectItem value="in_use">In Use</SelectItem>
-            <SelectItem value="retired">Retired</SelectItem>
-            <SelectItem value="lost">Lost</SelectItem>
-            <SelectItem value="pending_disposal">Pending for Disposal</SelectItem>
-            <SelectItem value="disposed">Disposed</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="w-44">
+          <SearchableSelect
+            value={filters.status}
+            onValueChange={(value) => onFiltersChange((prev) => ({ ...prev, status: value }))}
+            placeholder="Status"
+            searchPlaceholder="Search status..."
+            options={[
+              { value: "available", label: "Available" },
+              { value: "assigned", label: "Assigned" },
+              { value: "in_maintenance", label: "In Maintenance" },
+              { value: "in_stock", label: "In Stock" },
+              { value: "in_use", label: "In Use" },
+              { value: "retired", label: "Retired" },
+              { value: "lost", label: "Lost" },
+              { value: "pending_disposal", label: "Pending for Disposal" },
+              { value: "disposed", label: "Disposed" },
+            ]}
+            className="bg-secondary border-0"
+          />
+        </div>
 
-        <Select
-          value={filters.location}
-          onValueChange={(value) =>
-            onFiltersChange((prev) => ({ ...prev, location: value }))
-          }
-        >
-          <SelectTrigger className="w-40 bg-secondary border-0">
-            <SelectValue placeholder="Location" />
-          </SelectTrigger>
-          <SelectContent>
-            {locations.map((loc) => (
-              <SelectItem key={loc.id} value={String(loc.id)}>
-                {loc.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="w-48">
+          <SearchableSelect
+            value={filters.location}
+            onValueChange={(value) => onFiltersChange((prev) => ({ ...prev, location: value }))}
+            placeholder="Location"
+            searchPlaceholder="Search locations..."
+            options={locations.map((loc) => ({ value: String(loc.id), label: loc.name }))}
+            className="bg-secondary border-0"
+          />
+        </div>
 
-        <Select
-          value={filters.department}
-          onValueChange={(value) =>
-            onFiltersChange((prev) => ({ ...prev, department: value }))
-          }
-        >
-          <SelectTrigger className="w-40 bg-secondary border-0">
-            <SelectValue placeholder="Department" />
-          </SelectTrigger>
-          <SelectContent>
-            {departments.map((dept) => (
-              <SelectItem key={dept.id} value={String(dept.id)}>
-                {dept.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="w-48">
+          <SearchableSelect
+            value={filters.department}
+            onValueChange={(value) => onFiltersChange((prev) => ({ ...prev, department: value }))}
+            placeholder="Department"
+            searchPlaceholder="Search departments..."
+            options={departments.map((dept) => ({ value: String(dept.id), label: dept.name }))}
+            className="bg-secondary border-0"
+          />
+        </div>
 
-        <Select
-          value={filters.assetType}
-          onValueChange={(value) =>
-            onFiltersChange((prev) => ({ ...prev, assetType: value }))
-          }
-        >
-          <SelectTrigger className="w-40 bg-secondary border-0">
-            <SelectValue placeholder="Asset Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {assetTypes.map((type) => (
-              <SelectItem key={type.id} value={String(type.id)}>
-                {type.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="w-48">
+          <SearchableSelect
+            value={filters.assetType}
+            onValueChange={(value) => onFiltersChange((prev) => ({ ...prev, assetType: value }))}
+            placeholder="Asset Type"
+            searchPlaceholder="Search asset types..."
+            options={assetTypes.map((type) => ({ value: String(type.id), label: type.name }))}
+            className="bg-secondary border-0"
+          />
+        </div>
 
         
       </div>

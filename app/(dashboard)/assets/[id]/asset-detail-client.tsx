@@ -189,7 +189,7 @@ export function AssetDetailClient() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <User className="size-4 text-muted-foreground" />
-                  <span className="text-foreground">{asset.assigned_to_name ?? "Unassigned"}</span>
+                  <span className="text-foreground">{asset.assigned_to_username ?? asset.assigned_to_name ?? "Unassigned"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <User className="size-4 text-muted-foreground" />
@@ -210,6 +210,9 @@ export function AssetDetailClient() {
                 <p>Warranty end: {formatDate(asset.warranty_end_date)}</p>
                 <p>Expiry: {formatDate(asset.expiry_date)}</p>
                 <p>Return date: {formatDate(asset.return_date)}</p>
+                <p>Assignment type: {asset.assignment_type ?? asset.usage_type ?? "-"}</p>
+                <p>Assignment state: {asset.assignment_state === "inactive" ? "Inactive" : "Active"}</p>
+                <p>Email on hold: {asset.email_on_hold ? "Yes" : "No"}</p>
               </CardContent>
             </Card>
           </div>

@@ -25,6 +25,7 @@ import { FileDown, Upload, ChevronDown, Download } from "lucide-react";
 import { AssetsFilters } from "./assets-filters";
 import { AssetsTable } from "./assets-table";
 import { CreateAssetDialog } from "./create-asset-dialog";
+import { useCanCreate } from "@/lib/hooks/use-can-create";
 import { ImportCsvDialog } from "@/components/import-csv-dialog";
 
 export type AssetsFiltersState = {
@@ -66,6 +67,7 @@ export function AssetsView() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = React.useState(false);
+  const canCreate = useCanCreate();
   const { toast } = useToast();
 
   const handleDownloadSampleCsv = React.useCallback(async () => {
@@ -212,17 +214,19 @@ export function AssetsView() {
                 <FileDown className="mr-2 size-4" />
                 Download sample CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
-                <Upload className="mr-2 size-4" />
-                Import from CSV
-              </DropdownMenuItem>
+              {canCreate && (
+                <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                  <Upload className="mr-2 size-4" />
+                  Import from CSV
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={handleExportCsv}>
                 <Download className="mr-2 size-4" />
                 Export to CSV
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <CreateAssetDialog onSuccess={loadAssets} />
+          {canCreate && <CreateAssetDialog onSuccess={loadAssets} />}
         </div>
       </div>
       <ImportCsvDialog

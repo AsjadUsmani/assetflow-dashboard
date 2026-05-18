@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { getWorkspaceMenus, type WorkspaceMenu, type WorkspaceMenuGroup } from "@/lib/services/menu"
+import { loadWorkspaceMenusAndCapabilities } from "@/lib/services/capabilities"
 
 interface NavItem {
   title: string;
@@ -197,13 +198,13 @@ export function AppSidebar() {
 
   React.useEffect(() => {
     let cancelled = false;
-    getWorkspaceMenus()
-      .then(data => {
+    loadWorkspaceMenusAndCapabilities()
+      .then(({ groups }) => {
         if (!cancelled) {
-          setMenuGroups(data);
+          setMenuGroups(groups);
         }
       })
-      .catch(err => {
+      .catch((err) => {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : "Failed to load menus";
           setMenusError(message);

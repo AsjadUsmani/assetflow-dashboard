@@ -18,8 +18,13 @@ export type WorkspaceMenuGroup = {
 }
 
 export async function getWorkspaceMenus(): Promise<WorkspaceMenuGroup[]> {
-  // Use ApiService to call backend; ACL is enforced server-side
-  const json = await apiService.get<WorkspaceMenuGroup[]>("/workspace/menus", true)
-  return json.data ?? []
+  const json = await apiService.get<{
+    groups: WorkspaceMenuGroup[]
+    capabilities?: { can_create: boolean; can_update: boolean; can_delete: boolean }
+  }>("/workspace/menus", true)
+  if (Array.isArray(json.data)) {
+    return json.data
+  }
+  return json.data?.groups ?? []
 }
 

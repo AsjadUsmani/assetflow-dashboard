@@ -38,6 +38,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getAssetTypes } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
@@ -67,16 +68,15 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [locationId, setLocationId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [assignedUserId, setAssignedUserId] = useState("");
-  const [managedByUserId, setManagedByUserId] = useState("");
   const [assignedDate, setAssignedDate] = useState("");
-  const [usageType, setUsageType] = useState("");
-  const [impact, setImpact] = useState("");
+  const [assignmentType, setAssignmentType] = useState("");
+  const [assignmentState, setAssignmentState] = useState("active");
+  const [emailOnHold, setEmailOnHold] = useState(false);
   const [returnDate, setReturnDate] = useState("");
   const [remark, setRemark] = useState("");
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
   const [departmentPopoverOpen, setDepartmentPopoverOpen] = useState(false);
   const [assignedUserPopoverOpen, setAssignedUserPopoverOpen] = useState(false);
-  const [managedByPopoverOpen, setManagedByPopoverOpen] = useState(false);
   const [purchaseDate, setPurchaseDate] = useState("");
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -88,13 +88,15 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const selectedLocation = locations.find((loc) => String(loc.id) === locationId);
   const selectedDepartment = departments.find((dept) => String(dept.id) === departmentId);
   const selectedAssignedUser = users.find((user) => String(user.id) === assignedUserId);
-  const selectedManagedByUser = users.find((user) => String(user.id) === managedByUserId);
+  const filteredDepartments = locationId
+    ? departments.filter((d) => String(d.location_id) === locationId)
+    : departments;
+  const assignableUsers = users.filter((u) => u.is_active || emailOnHold);
   const canSubmit =
     !loading &&
     Boolean(selectedTypeId) &&
     Boolean(name.trim()) &&
-    Boolean(assignedUserId) &&
-    Boolean(managedByUserId);
+    Boolean(assignedUserId);
 
   const getPropertyDefaultValue = (prop: AssetType["properties"][number]): string | number | boolean | undefined => {
     const dataType = prop.data_type ?? "text";
@@ -163,11 +165,10 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setLocationPopoverOpen(false);
       setDepartmentPopoverOpen(false);
       setAssignedUserPopoverOpen(false);
-      setManagedByUserId("");
-      setManagedByPopoverOpen(false);
       setAssignedDate("");
-      setUsageType("");
-      setImpact("");
+      setAssignmentType("");
+      setAssignmentState("active");
+      setEmailOnHold(false);
       setReturnDate("");
       setRemark("");
       setPurchaseDate("");
@@ -204,7 +205,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   };
 
   const handleSubmit = async () => {
-    if (!selectedTypeId || !name.trim() || !assignedUserId || !managedByUserId) return;
+    if (!selectedTypeId || !name.trim() || !assignedUserId) return;
 
     // Temporary behavior: allow create without blocking on dynamic property requirements.
     setPropertyErrors({});
@@ -230,13 +231,13 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         location_id: locationId ? Number(locationId) : undefined,
         department_id: departmentId ? Number(departmentId) : undefined,
         assigned_to_user_id: assignedUserId ? Number(assignedUserId) : undefined,
-        managed_by_user_id: managedByUserId ? Number(managedByUserId) : undefined,
         purchase_date: purchaseDate || undefined,
         warranty_end_date: warrantyEndDate || undefined,
         expiry_date: expiryDate || undefined,
         assigned_date: assignedDate || undefined,
-        usage_type: usageType || undefined,
-        impact: impact || undefined,
+        assignment_type: assignmentType || undefined,
+        assignment_state: assignmentState || undefined,
+        email_on_hold: emailOnHold,
         return_date: returnDate || undefined,
         remark: remark.trim() || undefined,
         property_values: Object.keys(pv).length > 0 ? pv : undefined,
@@ -328,25 +329,6 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                 <Label htmlFor="domain">Domain</Label>
                 <Input id="domain" placeholder="Domain" className="bg-secondary border-0" value={domain} onChange={(e) => setDomain(e.target.value)} />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="bg-secondary border-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="in_maintenance">In Maintenance</SelectItem>
-                  <SelectItem value="in_stock">In Stock</SelectItem>
-                  <SelectItem value="in_use">In Use</SelectItem>
-                  <SelectItem value="retired">Retired</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
-                  <SelectItem value="pending_disposal">Pending for Disposal</SelectItem>
-                  <SelectItem value="disposed">Disposed</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -452,6 +434,26 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
 
           <TabsContent value="assignment" className="space-y-4 mt-4">
             <div className="space-y-2">
+              <Label>Status</Label>
+              <SearchableSelect
+                value={status}
+                onValueChange={setStatus}
+                placeholder="Select status"
+                searchPlaceholder="Search status..."
+                options={[
+                  { value: "available", label: "Available" },
+                  { value: "assigned", label: "Assigned" },
+                  { value: "in_maintenance", label: "In Maintenance" },
+                  { value: "in_stock", label: "In Stock" },
+                  { value: "in_use", label: "In Use" },
+                  { value: "retired", label: "Retired" },
+                  { value: "lost", label: "Lost" },
+                  { value: "pending_disposal", label: "Pending for Disposal" },
+                  { value: "disposed", label: "Disposed" },
+                ]}
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Location/Office</Label>
               <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
                 <PopoverTrigger asChild>
@@ -472,6 +474,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                             value={loc.name}
                             onSelect={() => {
                               setLocationId(String(loc.id));
+                              setDepartmentId("");
                               setLocationPopoverOpen(false);
                             }}
                           >
@@ -499,7 +502,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                     <CommandList>
                       <CommandEmpty>No departments found.</CommandEmpty>
                       <CommandGroup>
-                        {departments.map((dept) => (
+                        {filteredDepartments.map((dept) => (
                           <CommandItem
                             key={dept.id}
                             value={dept.name}
@@ -530,11 +533,9 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                   <Command>
                     <CommandInput placeholder="Search users..." />
                     <CommandList>
-                      <CommandEmpty>No active users found.</CommandEmpty>
+                      <CommandEmpty>No users found.</CommandEmpty>
                       <CommandGroup>
-                        {users
-                          .filter((u) => u.is_active)
-                          .map((user) => (
+                        {assignableUsers.map((user) => (
                             <CommandItem
                               key={user.id}
                               value={`${user.username} ${user.email ?? ""}`.trim()}
@@ -544,41 +545,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                               }}
                             >
                               {user.username}
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-2">
-              <Label>Managed By <span className="text-destructive">*</span></Label>
-              <Popover open={managedByPopoverOpen} onOpenChange={setManagedByPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start gap-2 font-normal">
-                    <Search className="size-4" />
-                    {selectedManagedByUser ? selectedManagedByUser.username : "Search or select user"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search users..." />
-                    <CommandList>
-                      <CommandEmpty>No active users found.</CommandEmpty>
-                      <CommandGroup>
-                        {users
-                          .filter((u) => u.is_active)
-                          .map((user) => (
-                            <CommandItem
-                              key={user.id}
-                              value={`${user.username} ${user.email ?? ""}`.trim()}
-                              onSelect={() => {
-                                setManagedByUserId(String(user.id));
-                                setManagedByPopoverOpen(false);
-                              }}
-                            >
-                              {user.username}
+                              {!user.is_active ? " (inactive)" : ""}
                             </CommandItem>
                           ))}
                       </CommandGroup>
@@ -593,30 +560,41 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="usageType">Usage Type</Label>
-                <Select value={usageType} onValueChange={setUsageType}>
-                  <SelectTrigger className="bg-secondary border-0">
-                    <SelectValue placeholder="Select usage type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Permanent">Permanent</SelectItem>
-                    <SelectItem value="Loaner">Loaner</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Assignment Type</Label>
+                <SearchableSelect
+                  value={assignmentType}
+                  onValueChange={setAssignmentType}
+                  placeholder="Permanent or Loaner"
+                  searchPlaceholder="Search..."
+                  options={[
+                    { value: "Permanent", label: "Permanent" },
+                    { value: "Loaner", label: "Loaner" },
+                  ]}
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="impact">Impact</Label>
-                <Select value={impact} onValueChange={setImpact}>
-                  <SelectTrigger className="bg-secondary border-0">
-                    <SelectValue placeholder="Select impact" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Assignment State</Label>
+                <SearchableSelect
+                  value={assignmentState}
+                  onValueChange={setAssignmentState}
+                  placeholder="Active or Inactive"
+                  searchPlaceholder="Search..."
+                  options={[
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive (Terminate)" },
+                  ]}
+                />
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="email-on-hold"
+                checked={emailOnHold}
+                onCheckedChange={(checked) => setEmailOnHold(!!checked)}
+              />
+              <Label htmlFor="email-on-hold" className="font-normal cursor-pointer">
+                Hold — keep assignee email usable after the user has left
+              </Label>
             </div>
             <div className="space-y-2">
               <Label htmlFor="returnDate">Return Date</Label>
