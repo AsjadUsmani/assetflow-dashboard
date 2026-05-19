@@ -470,6 +470,8 @@ export const dashboardStats: DashboardStats = {
   assetsByStatus: {
     available: 892,
     assigned: 1423,
+    in_stock: 0,
+    in_use: 0,
     in_maintenance: 127,
     retired: 89,
     lost: 16,

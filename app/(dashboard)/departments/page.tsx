@@ -45,8 +45,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { ListPagination } from "@/components/list-pagination";
 import {
-  getDepartments,
+  getDepartmentsPage,
   deleteDepartment,
   type Department,
 } from "@/lib/services/departments";
@@ -60,28 +61,39 @@ export default function DepartmentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<{
+    page: number
+    limit: number
+    total: number
+    total_pages: number
+    has_next_page: boolean
+    has_previous_page: boolean
+  } | null>(null);
   const { toast } = useToast();
 
   const loadDepartments = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getDepartments();
-      setDepartments(data);
+      const data = await getDepartmentsPage({ search: searchQuery.trim() || undefined, page, limit: 20 });
+      setDepartments(data.items);
+      setPagination(data.pagination);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load departments");
+      setPagination(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, searchQuery]);
 
   useEffect(() => {
     void loadDepartments();
   }, [loadDepartments]);
 
-  const filteredDepartments = departments.filter((dept) =>
-    dept.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -212,7 +224,7 @@ export default function DepartmentsPage() {
                   <CardDescription>
                     {loading
                       ? "Loading..."
-                      : `${filteredDepartments.length} department${filteredDepartments.length !== 1 ? "s" : ""} found`}
+                      : `${pagination?.total ?? departments.length} department${(pagination?.total ?? departments.length) !== 1 ? "s" : ""} found`}
                   </CardDescription>
                 </div>
                 <div className="relative w-full sm:w-64">
@@ -245,14 +257,14 @@ export default function DepartmentsPage() {
                         Loading...
                       </TableCell>
                     </TableRow>
-                  ) : filteredDepartments.length === 0 ? (
+                  ) : departments.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground">
                         No departments found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredDepartments.map((dept) => (
+                    departments.map((dept) => (
                       <TableRow key={dept.id}>
                         <TableCell>
                           <Link
@@ -317,6 +329,11 @@ export default function DepartmentsPage() {
                   )}
                 </TableBody>
               </Table>
+              <ListPagination
+                pagination={pagination}
+                label="departments"
+                onPageChange={setPage}
+              />
             </CardContent>
           </Card>
         </div>

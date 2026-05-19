@@ -49,6 +49,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ListPagination } from "@/components/list-pagination"
 import {
   Users,
   Search,
@@ -74,6 +75,7 @@ import { useRouter } from "next/navigation"
 import { apiService } from "@/lib/services/api-service"
 import { useToast } from "@/components/ui/use-toast"
 import { ImportCsvDialog } from "@/components/import-csv-dialog"
+import { getWorkspaceRoles, getWorkspaceUsersPage } from "@/lib/services/workspace-users"
 
 const roleConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   super_admin: {
@@ -127,6 +129,18 @@ type UserRow = {
   last_login: string | null
 }
 
+type UsersPageResponse = {
+  items: UserRow[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    total_pages: number
+    has_next_page: boolean
+    has_previous_page: boolean
+  }
+}
+
 export default function UsersPage() {
   const router = useRouter()
   const [users, setUsers] = React.useState<UserRow[]>([])
@@ -137,23 +151,42 @@ export default function UsersPage() {
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [importDialogOpen, setImportDialogOpen] = React.useState(false)
   const [actionUserId, setActionUserId] = React.useState<number | null>(null)
+  const [pagination, setPagination] = React.useState<UsersPageResponse["pagination"] | null>(null)
+  const [page, setPage] = React.useState(1)
+  const [roles, setRoles] = React.useState<{ id: number; name: string }[]>([])
   const { toast } = useToast()
 
   const loadUsers = React.useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await apiService.get<UserRow[]>("/workspace/users")
-      if (res.data) setUsers(res.data)
+      const res = await getWorkspaceUsersPage({
+        search: search.trim() || undefined,
+        role: roleFilter === "all" ? undefined : roleFilter,
+        status: statusFilter === "all" ? undefined : (statusFilter as "active" | "inactive"),
+        page,
+        limit: 20,
+      })
+      setUsers(res.items)
+      setPagination(res.pagination)
     } catch {
       setUsers([])
+      setPagination(null)
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [page, roleFilter, search, statusFilter])
 
   React.useEffect(() => {
     void loadUsers()
   }, [loadUsers])
+
+  React.useEffect(() => {
+    void getWorkspaceRoles().then((data) => setRoles(data)).catch(() => setRoles([]))
+  }, [])
+
+  React.useEffect(() => {
+    setPage(1)
+  }, [search, roleFilter, statusFilter])
 
   const handleDownloadSampleCsv = async () => {
     try {
@@ -215,19 +248,6 @@ export default function UsersPage() {
     }
   }
 
-  const filteredUsers = users.filter((user) => {
-    const fullName = user.username || user.email || ""
-    const matchesSearch =
-      fullName.toLowerCase().includes(search.toLowerCase()) ||
-      (user.email ?? "").toLowerCase().includes(search.toLowerCase())
-    const matchesRole =
-      roleFilter === "all" ||
-      (user.role_name ?? "").toLowerCase().replace(" ", "_") === roleFilter
-    const status = user.is_active ? "active" : "inactive"
-    const matchesStatus = statusFilter === "all" || status === statusFilter
-    return matchesSearch && matchesRole && matchesStatus
-  })
-
   const activeUsers = users.filter((u) => u.is_active).length
   const adminCount = users.filter((u) =>
     (u.role_name ?? "").toLowerCase().includes("admin"),
@@ -248,21 +268,10 @@ export default function UsersPage() {
       lastLogin.getMonth() === now.getMonth()
     )
   }).length
-  const roleOptions = React.useMemo(() => {
-    const uniq = new Set<string>()
-    for (const user of users) {
-      const roleName = (user.role_name ?? "").trim()
-      if (roleName) uniq.add(roleName)
-    }
-    return Array.from(uniq).sort((a, b) => a.localeCompare(b))
-  }, [users])
-
   const selectedRoleLabel =
     roleFilter === "all"
       ? "All Roles"
-      : roleOptions.find(
-        (roleName) => roleName.toLowerCase().replace(/\s+/g, "_") === roleFilter,
-      ) ?? "Role"
+      : roleFilter
 
   return (
     <>
@@ -383,7 +392,7 @@ export default function UsersPage() {
                   <div>
                     <CardTitle>Admin Users</CardTitle>
                     <CardDescription>
-                      {filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""} found
+                      {pagination?.total ?? users.length} user{(pagination?.total ?? users.length) !== 1 ? "s" : ""} found
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
@@ -467,16 +476,16 @@ export default function UsersPage() {
                             >
                               All Roles
                             </CommandItem>
-                            {roleOptions.map((roleName) => (
+                            {roles.map((role) => (
                               <CommandItem
-                                key={roleName}
-                                value={roleName}
+                                key={role.id}
+                                value={role.name}
                                 onSelect={() => {
-                                  setRoleFilter(roleName.toLowerCase().replace(/\s+/g, "_"))
+                                  setRoleFilter(role.name)
                                   setRolePopoverOpen(false)
                                 }}
                               >
-                                {roleName}
+                                {role.name}
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -510,7 +519,7 @@ export default function UsersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredUsers.map((user) => {
+                      {users.map((user) => {
                         const roleKey = (user.role_name ?? "")
                           .toLowerCase()
                           .replace(/\s+/g, "_")
@@ -612,6 +621,11 @@ export default function UsersPage() {
                   </Table>
                 </div>
               </CardContent>
+              <ListPagination
+                pagination={pagination}
+                label="users"
+                onPageChange={setPage}
+              />
             </Card>
           </>
         )}

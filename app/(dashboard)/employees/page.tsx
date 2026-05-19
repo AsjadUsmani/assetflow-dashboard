@@ -36,6 +36,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ListPagination } from "@/components/list-pagination"
 import {
   Users,
   Search,
@@ -54,7 +55,7 @@ import { useRouter } from "next/navigation"
 import { apiService } from "@/lib/services/api-service"
 import { useToast } from "@/components/ui/use-toast"
 import { ImportCsvDialog } from "@/components/import-csv-dialog"
-import { getEmployees, type Employee } from "@/lib/services/employees"
+import { getEmployeesPage, type Employee } from "@/lib/services/employees"
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   active: { label: "Active", color: "bg-green-500/10 text-green-600 dark:text-green-400" },
@@ -83,23 +84,43 @@ export default function EmployeesPage() {
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [importDialogOpen, setImportDialogOpen] = React.useState(false)
   const [actionEmployeeId, setActionEmployeeId] = React.useState<number | null>(null)
+  const [page, setPage] = React.useState(1)
+  const [pagination, setPagination] = React.useState<{
+    page: number
+    limit: number
+    total: number
+    total_pages: number
+    has_next_page: boolean
+    has_previous_page: boolean
+  } | null>(null)
   const { toast } = useToast()
 
   const loadEmployees = React.useCallback(async () => {
     setIsLoading(true)
     try {
-      const rows = await getEmployees()
-      setEmployees(rows)
+      const rows = await getEmployeesPage({
+        search: search.trim() || undefined,
+        status: statusFilter === "all" ? undefined : (statusFilter as "active" | "inactive"),
+        page,
+        limit: 20,
+      })
+      setEmployees(rows.items)
+      setPagination(rows.pagination)
     } catch {
       setEmployees([])
+      setPagination(null)
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [page, search, statusFilter])
 
   React.useEffect(() => {
     void loadEmployees()
   }, [loadEmployees])
+
+  React.useEffect(() => {
+    setPage(1)
+  }, [search, statusFilter])
 
   const handleDownloadSampleCsv = async () => {
     try {
@@ -160,19 +181,6 @@ export default function EmployeesPage() {
       setActionEmployeeId(null)
     }
   }
-
-  const filtered = employees.filter((row) => {
-    const name = primaryName(row)
-    const q = search.toLowerCase()
-    const matchesSearch =
-      name.toLowerCase().includes(q) ||
-      (row.email ?? "").toLowerCase().includes(q) ||
-      (row.department_name ?? "").toLowerCase().includes(q) ||
-      (row.designation_name ?? "").toLowerCase().includes(q)
-    const status = row.is_active ? "active" : "inactive"
-    const matchesStatus = statusFilter === "all" || status === statusFilter
-    return matchesSearch && matchesStatus
-  })
 
   const activeCount = employees.filter((e) => e.is_active).length
   const inactiveCount = employees.length - activeCount
@@ -244,8 +252,8 @@ export default function EmployeesPage() {
                   <Users className="size-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{employees.length}</div>
-                  <p className="text-xs text-muted-foreground">{activeCount} currently active</p>
+                  <div className="text-2xl font-bold">{pagination?.total ?? employees.length}</div>
+                  <p className="text-xs text-muted-foreground">{activeCount} currently active on this page</p>
                 </CardContent>
               </Card>
               <Card>
@@ -266,7 +274,7 @@ export default function EmployeesPage() {
                   <div>
                     <CardTitle>Employees</CardTitle>
                     <CardDescription>
-                      {filtered.length} employee{filtered.length !== 1 ? "s" : ""} found (HR directory, no login)
+                      {pagination?.total ?? employees.length} employee{(pagination?.total ?? employees.length) !== 1 ? "s" : ""} found (HR directory, no login)
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
@@ -344,7 +352,7 @@ export default function EmployeesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filtered.map((row) => {
+                      {employees.map((row) => {
                         const statusKey = row.is_active ? "active" : "inactive"
                         const status = statusConfig[statusKey]
                         const name = primaryName(row)
@@ -410,6 +418,11 @@ export default function EmployeesPage() {
                     </TableBody>
                   </Table>
                 </div>
+                <ListPagination
+                  pagination={pagination}
+                  label="employees"
+                  onPageChange={setPage}
+                />
               </CardContent>
             </Card>
           </>

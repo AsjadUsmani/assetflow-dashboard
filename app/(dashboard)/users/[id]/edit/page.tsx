@@ -40,10 +40,7 @@ import {
 import { apiService } from "@/lib/services/api-service"
 import { useToast } from "@/components/ui/use-toast"
 import { getDepartments, type Department } from "@/lib/services/departments"
-import {
-  getWorkspaceUserMeta,
-  type UserOfficeOption,
-} from "@/lib/services/workspace-users"
+import { getWorkspaceUserMeta } from "@/lib/services/workspace-users"
 
 type Role = { id: number; name: string }
 const HARDCODED_COUNTRY_NAME = "India"
@@ -77,7 +74,6 @@ export default function EditUserPage() {
   const [isSaving, setIsSaving] = React.useState(false)
   const [roles, setRoles] = React.useState<Role[]>([])
   const [departments, setDepartments] = React.useState<Department[]>([])
-  const [officeOptions, setOfficeOptions] = React.useState<UserOfficeOption[]>([])
   const [designationOptions, setDesignationOptions] = React.useState<Array<{ id: number; name: string }>>([])
 
   const [username, setUsername] = React.useState("")
@@ -89,7 +85,6 @@ export default function EditUserPage() {
   const [departmentPopoverOpen, setDepartmentPopoverOpen] = React.useState(false)
   const [city, setCity] = React.useState("")
   const [designationId, setDesignationId] = React.useState("")
-  const [office, setOffice] = React.useState("")
   const [isActive, setIsActive] = React.useState(true)
   const [emailOnHold, setEmailOnHold] = React.useState(false)
 
@@ -119,14 +114,12 @@ export default function EditUserPage() {
           setDepartmentId(user.department_id ? String(user.department_id) : "")
           setCity(user.city ?? "")
           setDesignationId(user.designation_id ? String(user.designation_id) : "")
-          setOffice(user.office ?? "")
           setIsActive(user.is_active)
           setEmailOnHold(user.email_on_hold ?? false)
         }
 
         setRoles(rolesRes.data ?? [])
         setDepartments(depts)
-        setOfficeOptions(meta.office_options ?? [])
         setDesignationOptions(meta.designation_options ?? [])
       } catch (err) {
         if (!controller.signal.aborted) {
@@ -172,7 +165,6 @@ export default function EditUserPage() {
         country_name: HARDCODED_COUNTRY_NAME,
         city: city.trim() || null,
         designation_id: designationId ? Number(designationId) : null,
-        office,
         is_active: isActive,
         email_on_hold: emailOnHold,
       }

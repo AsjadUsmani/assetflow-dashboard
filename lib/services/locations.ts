@@ -1,4 +1,5 @@
 import { apiService } from "./api-service"
+import { buildPaginationQuery, type ListPaginationQuery, type PaginatedResponse } from "@/lib/services/pagination"
 
 export type Location = {
   id: number
@@ -33,11 +34,22 @@ export type CreateLocationBody = {
 
 export type UpdateLocationBody = Partial<CreateLocationBody>
 
+export type LocationListQuery = ListPaginationQuery & {
+  search?: string
+}
+
 const BASE = "/workspace/locations"
 
 export async function getLocations(): Promise<Location[]> {
   const json = await apiService.get<Location[]>(BASE, true)
   return json.data ?? []
+}
+
+export async function getLocationsPage(
+  query: LocationListQuery,
+): Promise<PaginatedResponse<Location>> {
+  const json = await apiService.get<PaginatedResponse<Location>>(`${BASE}${buildPaginationQuery(query)}`, true)
+  return json.data ?? { items: [], pagination: { page: 1, limit: 20, total: 0, total_pages: 0, has_next_page: false, has_previous_page: false } }
 }
 
 export async function getLocationById(id: number): Promise<Location | null> {

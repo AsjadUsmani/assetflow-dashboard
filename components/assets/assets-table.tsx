@@ -10,13 +10,12 @@ import {
   ArrowLeftRight,
   UserPlus,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ListPagination } from "../list-pagination";
 import {
   Table,
   TableBody,
@@ -33,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Asset } from "@/lib/services/assets";
+import type { PaginationState } from "@/lib/services/pagination";
 import { deleteAsset } from "@/lib/services/assets";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -52,11 +52,15 @@ export function AssetsTable({
   loading,
   error,
   onRefresh,
+  pagination,
+  onPageChange,
 }: {
   assets: Asset[];
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
+  pagination?: PaginationState | null;
+  onPageChange?: (page: number) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const router = useRouter();
@@ -217,28 +221,23 @@ export function AssetsTable({
         </Table>
 
         {!loading && assets.length > 0 && (
-          <div className="flex items-center justify-between border-t border-border px-4 py-3">
-            <div className="text-sm text-muted-foreground">
-              {selectedIds.length > 0 ? (
-                <span>{selectedIds.length} of {assets.length} selected</span>
-              ) : (
-                <span>Showing {assets.length} assets</span>
-              )}
+          onPageChange && pagination ? (
+            <ListPagination
+              pagination={pagination}
+              label="assets"
+              onPageChange={onPageChange}
+            />
+          ) : (
+            <div className="flex items-center justify-between border-t border-border px-4 py-3">
+              <div className="text-sm text-muted-foreground">
+                {selectedIds.length > 0 ? (
+                  <span>{selectedIds.length} of {assets.length} selected</span>
+                ) : (
+                  <span>Showing {assets.length} assets</span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled>
-                <ChevronLeft className="mr-1 size-4" />
-                Previous
-              </Button>
-              <Button variant="secondary" size="sm" className="size-8 p-0">
-                1
-              </Button>
-              <Button variant="outline" size="sm" disabled>
-                Next
-                <ChevronRight className="ml-1 size-4" />
-              </Button>
-            </div>
-          </div>
+          )
         )}
       </CardContent>
     </Card>

@@ -1,4 +1,5 @@
 import { apiService } from "./api-service"
+import { buildPaginationQuery, type ListPaginationQuery, type PaginatedResponse } from "@/lib/services/pagination"
 
 export type Asset = {
   id: number
@@ -48,6 +49,8 @@ export type ListAssetsQuery = {
   location?: number
   department?: number
 }
+
+export type AssetListPageQuery = ListPaginationQuery & ListAssetsQuery
 
 export type CreateAssetBody = {
   asset_type_id: number
@@ -132,6 +135,12 @@ export async function getAssets(query?: ListAssetsQuery): Promise<Asset[]> {
   const url = query ? `${BASE}${buildQuery(query)}` : BASE
   const json = await apiService.get<Asset[]>(url, true)
   return json.data ?? []
+}
+
+export async function getAssetsPage(query: AssetListPageQuery): Promise<PaginatedResponse<Asset>> {
+  const url = `${BASE}${buildQuery(query)}${buildPaginationQuery(query)}`
+  const json = await apiService.get<PaginatedResponse<Asset>>(url, true)
+  return json.data ?? { items: [], pagination: { page: 1, limit: 20, total: 0, total_pages: 0, has_next_page: false, has_previous_page: false } }
 }
 
 export async function getAssetById(id: number): Promise<Asset | null> {

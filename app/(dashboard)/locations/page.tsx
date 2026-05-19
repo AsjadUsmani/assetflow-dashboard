@@ -43,8 +43,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { ListPagination } from "@/components/list-pagination";
 import {
-  getLocations,
+  getLocationsPage,
   deleteLocation,
   type Location,
 } from "@/lib/services/locations";
@@ -58,30 +59,39 @@ export default function LocationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<{
+    page: number
+    limit: number
+    total: number
+    total_pages: number
+    has_next_page: boolean
+    has_previous_page: boolean
+  } | null>(null);
   const { toast } = useToast();
 
   const loadLocations = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getLocations();
-      setLocations(data);
+      const data = await getLocationsPage({ search: searchQuery.trim() || undefined, page, limit: 20 });
+      setLocations(data.items);
+      setPagination(data.pagination);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load locations");
+      setPagination(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, searchQuery]);
 
   useEffect(() => {
     void loadLocations();
   }, [loadLocations]);
 
-  const filteredLocations = locations.filter(
-    (loc) =>
-      loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (loc.address && loc.address.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -212,7 +222,7 @@ export default function LocationsPage() {
                   <CardDescription>
                     {loading
                       ? "Loading..."
-                      : `${filteredLocations.length} location${filteredLocations.length !== 1 ? "s" : ""} found`}
+                      : `${pagination?.total ?? locations.length} location${(pagination?.total ?? locations.length) !== 1 ? "s" : ""} found`}
                   </CardDescription>
                 </div>
                 <div className="relative w-full sm:w-64">
@@ -245,14 +255,14 @@ export default function LocationsPage() {
                         Loading...
                       </TableCell>
                     </TableRow>
-                  ) : filteredLocations.length === 0 ? (
+                  ) : locations.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground">
                         No locations found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredLocations.map((location) => (
+                    locations.map((location) => (
                       <TableRow key={location.id}>
                         <TableCell>
                           <Link
@@ -320,6 +330,11 @@ export default function LocationsPage() {
                   )}
                 </TableBody>
               </Table>
+              <ListPagination
+                pagination={pagination}
+                label="locations"
+                onPageChange={setPage}
+              />
             </CardContent>
           </Card>
         </div>

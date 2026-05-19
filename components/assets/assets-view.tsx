@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useSearchParams } from "next/navigation";
-import { getAssets, exportAssetsCsv } from "@/lib/services/assets";
+import { getAssetsPage, exportAssetsCsv } from "@/lib/services/assets";
 import { getAssetTypes } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
@@ -67,6 +67,15 @@ export function AssetsView() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = React.useState(false);
+  const [page, setPage] = React.useState(1);
+  const [pagination, setPagination] = React.useState<{
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+    has_next_page: boolean;
+    has_previous_page: boolean;
+  } | null>(null);
   const canCreate = useCanCreate();
   const { toast } = useToast();
 
@@ -126,21 +135,26 @@ export function AssetsView() {
   const loadAssets = React.useCallback(async () => {
     setLoading(true);
     setError(null);
-    const query: ListAssetsQuery = {};
+    const query: ListAssetsQuery & { search?: string; page?: number; limit?: number } = {};
     if (filters.assetType) query.assetType = Number(filters.assetType);
     if (filters.status) query.status = filters.status;
     if (filters.location) query.location = Number(filters.location);
     if (filters.department) query.department = Number(filters.department);
+    if (filters.search.trim()) query.search = filters.search.trim();
+    query.page = page;
+    query.limit = 20;
     try {
-      const data = await getAssets(query);
-      setAssets(data);
+      const data = await getAssetsPage(query);
+      setAssets(data.items);
+      setPagination(data.pagination);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load assets");
       setAssets([]);
+      setPagination(null);
     } finally {
       setLoading(false);
     }
-  }, [filters.assetType, filters.status, filters.location, filters.department]);
+  }, [filters.assetType, filters.status, filters.location, filters.department, filters.search, page]);
 
   React.useEffect(() => {
     loadOptions();
@@ -168,6 +182,10 @@ export function AssetsView() {
   }, [assetTypeFromUrl, statusFromUrl, locationFromUrl, departmentFromUrl]);
 
   React.useEffect(() => {
+    setPage(1);
+  }, [filters.assetType, filters.status, filters.location, filters.department, filters.search, presetFromUrl, dateRangeFromUrl]);
+
+  React.useEffect(() => {
     loadAssets();
   }, [loadAssets]);
 
@@ -180,19 +198,8 @@ export function AssetsView() {
   }, [assets, presetFromUrl, dateRangeFromUrl]);
 
   const filteredAssets = React.useMemo(() => {
-    const term = filters.search.trim().toLowerCase();
-    if (!term) return scopedAssets;
-    return scopedAssets.filter((asset) => {
-      return (
-        (asset.host_name || asset.name).toLowerCase().includes(term) ||
-        (asset.serial_number ?? "").toLowerCase().includes(term) ||
-        (asset.asset_type_name ?? "").toLowerCase().includes(term) ||
-        (asset.location_name ?? "").toLowerCase().includes(term) ||
-        (asset.department_name ?? "").toLowerCase().includes(term) ||
-        (asset.assigned_to_username ?? asset.assigned_to_name ?? "").toLowerCase().includes(term)
-      );
-    });
-  }, [scopedAssets, filters.search]);
+    return scopedAssets;
+  }, [scopedAssets]);
 
   return (
     <>
@@ -250,6 +257,8 @@ export function AssetsView() {
         loading={loading}
         error={error}
         onRefresh={loadAssets}
+        pagination={pagination}
+        onPageChange={setPage}
       />
     </>
   );

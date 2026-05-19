@@ -1,4 +1,5 @@
 import { apiService } from "./api-service"
+import { buildPaginationQuery, type ListPaginationQuery, type PaginatedResponse } from "@/lib/services/pagination"
 
 export type Employee = {
   id: number
@@ -39,11 +40,23 @@ export type CreateEmployeeBody = {
   is_active?: boolean
 }
 
+export type EmployeeListQuery = ListPaginationQuery & {
+  search?: string
+  status?: "active" | "inactive"
+}
+
 const BASE = "/workspace/employees"
 
 export async function getEmployees(): Promise<Employee[]> {
   const json = await apiService.get<Employee[]>(BASE, true)
   return json.data ?? []
+}
+
+export async function getEmployeesPage(
+  query: EmployeeListQuery,
+): Promise<PaginatedResponse<Employee>> {
+  const json = await apiService.get<PaginatedResponse<Employee>>(`${BASE}${buildPaginationQuery(query)}`, true)
+  return json.data ?? { items: [], pagination: { page: 1, limit: 20, total: 0, total_pages: 0, has_next_page: false, has_previous_page: false } }
 }
 
 export async function getEmployeeById(id: number): Promise<EmployeeDetail | null> {
