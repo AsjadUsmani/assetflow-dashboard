@@ -33,7 +33,6 @@ export type Asset = {
   warranty_end_date: string | null
   expiry_date: string | null
   assigned_date: string | null
-  assignment_type: string | null
   usage_type: string | null
   impact: string | null
   return_date: string | null
@@ -71,7 +70,6 @@ export type CreateAssetBody = {
   warranty_end_date?: string
   expiry_date?: string
   assigned_date?: string
-  assignment_type?: string
   return_date?: string
   remark?: string
   property_values?: Record<string, unknown>
@@ -95,10 +93,37 @@ export type UpdateAssetBody = {
   warranty_end_date?: string | null
   expiry_date?: string | null
   assigned_date?: string | null
-  assignment_type?: string | null
   return_date?: string | null
   remark?: string | null
   property_values?: Record<string, unknown> | null
+}
+
+export const assetStatusOptions = [
+  { value: "available", label: "Available" },
+  { value: "assigned", label: "Assigned" },
+  { value: "permanent", label: "Permanent" },
+  { value: "loaner", label: "Loaner" },
+  { value: "in_stock", label: "In Stock" },
+  { value: "in_use", label: "In Use" },
+  { value: "in_maintenance", label: "In Maintenance" },
+  { value: "retired", label: "Retired" },
+  { value: "lost", label: "Lost" },
+  { value: "pending_disposal", label: "Pending for Disposal" },
+  { value: "disposed", label: "Disposed" },
+] as const
+
+export const assetStatusConfig: Record<string, { label: string; className: string }> = {
+  available: { label: "Available", className: "bg-success/20 text-success border-success/30" },
+  assigned: { label: "Assigned", className: "bg-primary/20 text-primary border-primary/30" },
+  permanent: { label: "Permanent", className: "bg-emerald-500/20 text-emerald-600 border-emerald-500/30" },
+  loaner: { label: "Loaner", className: "bg-cyan-500/20 text-cyan-600 border-cyan-500/30" },
+  in_maintenance: { label: "In Maintenance", className: "bg-warning/20 text-warning border-warning/30" },
+  in_stock: { label: "In Stock", className: "bg-sky-500/20 text-sky-400 border-sky-500/30" },
+  in_use: { label: "In Use", className: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
+  retired: { label: "Retired", className: "bg-muted text-muted-foreground border-border" },
+  lost: { label: "Lost", className: "bg-destructive/20 text-destructive border-destructive/30" },
+  pending_disposal: { label: "Pending for Disposal", className: "bg-amber-500/20 text-amber-500 border-amber-500/30" },
+  disposed: { label: "Disposed", className: "bg-slate-500/20 text-slate-300 border-slate-500/30" },
 }
 
 export type AssignmentHistoryEntry = {

@@ -107,7 +107,7 @@ const roleConfig: Record<string, { label: string; color: string; icon: React.Ele
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   active: { label: "Active", color: "bg-green-500/10 text-green-600 dark:text-green-400" },
-  inactive: { label: "Inactive", color: "bg-secondary text-muted-foreground" },
+  inactive: { label: "Terminated", color: "bg-secondary text-muted-foreground" },
   suspended: { label: "Suspended", color: "bg-red-500/10 text-red-600 dark:text-red-400" },
 }
 
@@ -233,14 +233,14 @@ export default function UsersPage() {
         is_active: !user.is_active,
       })
       toast({
-        title: user.is_active ? "User suspended" : "User activated",
-        description: `${user.username} has been ${user.is_active ? "suspended" : "activated"}.`,
+        title: user.is_active ? "User terminated" : "User activated",
+        description: `${user.username} has been ${user.is_active ? "terminated" : "activated"}.`,
       })
       await loadUsers()
     } catch (e) {
       toast({
         variant: "destructive",
-        title: user.is_active ? "Failed to suspend user" : "Failed to activate user",
+        title: user.is_active ? "Failed to terminate user" : "Failed to activate user",
         description: e instanceof Error ? e.message : "Unknown error",
       })
     } finally {
@@ -272,6 +272,12 @@ export default function UsersPage() {
     roleFilter === "all"
       ? "All Roles"
       : roleFilter
+  const selectedStatusLabel =
+    statusFilter === "all"
+      ? "All Status"
+      : statusFilter === "active"
+        ? "Active"
+        : "Terminated"
 
   return (
     <>
@@ -495,13 +501,12 @@ export default function UsersPage() {
                   </Popover>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-full sm:w-37.5">
-                      <SelectValue placeholder="Status" />
+                      <SelectValue placeholder={selectedStatusLabel} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="suspended">Suspended</SelectItem>
+                      <SelectItem value="inactive">Terminated</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -608,7 +613,7 @@ export default function UsersPage() {
                                     {actionUserId === user.id
                                       ? "Updating..."
                                       : user.is_active
-                                        ? "Suspend User"
+                                        ? "Terminate"
                                         : "Activate User"}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>

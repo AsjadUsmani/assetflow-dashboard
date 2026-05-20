@@ -235,7 +235,7 @@ export default function UserDetailsPage() {
                   <Label>Status</Label>
                   <div>
                     <Badge variant={user.is_active ? "default" : "secondary"}>
-                      {user.is_active ? "Active" : "Inactive"}
+                      {user.is_active ? "Active" : "Terminated"}
                     </Badge>
                   </div>
                 </div>

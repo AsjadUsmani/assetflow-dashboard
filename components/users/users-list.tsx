@@ -301,7 +301,7 @@ export function UsersList() {
                           variant="outline"
                           className="bg-muted text-muted-foreground border-border"
                         >
-                          Inactive
+                          Terminated
                         </Badge>
                       )}
                     </TableCell>

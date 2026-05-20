@@ -352,7 +352,7 @@ export default function AddUserPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive (Terminate)</SelectItem>
+                          <SelectItem value="inactive">Terminated</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

@@ -10,6 +10,7 @@ import type { AssetsFiltersState } from "./assets-view";
 import type { AssetType } from "@/lib/services/asset-types";
 import type { Location } from "@/lib/services/locations";
 import type { Department } from "@/lib/services/departments";
+import { assetStatusOptions } from "@/lib/services/assets";
 
 export function AssetsFilters({
   filters,
@@ -63,17 +64,7 @@ export function AssetsFilters({
             onValueChange={(value) => onFiltersChange((prev) => ({ ...prev, status: value }))}
             placeholder="Status"
             searchPlaceholder="Search status..."
-            options={[
-              { value: "available", label: "Available" },
-              { value: "assigned", label: "Assigned" },
-              { value: "in_maintenance", label: "In Maintenance" },
-              { value: "in_stock", label: "In Stock" },
-              { value: "in_use", label: "In Use" },
-              { value: "retired", label: "Retired" },
-              { value: "lost", label: "Lost" },
-              { value: "pending_disposal", label: "Pending for Disposal" },
-              { value: "disposed", label: "Disposed" },
-            ]}
+            options={assetStatusOptions.map((option) => ({ value: option.value, label: option.label }))}
             className="bg-secondary border-0"
           />
         </div>

@@ -24,7 +24,6 @@ export function hasMissingNonCompulsoryInfo(asset: Asset): boolean {
     asset.purchase_date,
     asset.warranty_end_date,
     asset.assigned_date,
-    asset.usage_type,
     asset.impact,
     asset.return_date,
     asset.remark,

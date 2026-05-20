@@ -8,21 +8,9 @@ import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getAssetById } from "@/lib/services/assets";
+import { assetStatusConfig, getAssetById } from "@/lib/services/assets";
 import { deleteAsset } from "@/lib/services/assets";
 import type { Asset } from "@/lib/services/assets";
-
-const statusConfig: Record<string, { label: string; className: string }> = {
-  available: { label: "Available", className: "bg-success/20 text-success border-success/30" },
-  assigned: { label: "Assigned", className: "bg-primary/20 text-primary border-primary/30" },
-  in_maintenance: { label: "In Maintenance", className: "bg-warning/20 text-warning border-warning/30" },
-  in_stock: { label: "In Stock", className: "bg-sky-500/20 text-sky-400 border-sky-500/30" },
-  in_use: { label: "In Use", className: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
-  retired: { label: "Retired", className: "bg-muted text-muted-foreground border-border" },
-  lost: { label: "Lost", className: "bg-destructive/20 text-destructive border-destructive/30" },
-  pending_disposal: { label: "Pending for Disposal", className: "bg-amber-500/20 text-amber-500 border-amber-500/30" },
-  disposed: { label: "Disposed", className: "bg-slate-500/20 text-slate-300 border-slate-500/30" },
-};
 
 function formatDate(s: string | null): string {
   if (!s) return "-";
@@ -83,7 +71,7 @@ export function AssetDetailClient() {
     );
   }
 
-  const status = statusConfig[asset.status] ?? { label: asset.status, className: "" };
+  const status = assetStatusConfig[asset.status] ?? { label: asset.status, className: "" };
 
   return (
     <>
@@ -210,7 +198,6 @@ export function AssetDetailClient() {
                 <p>Warranty end: {formatDate(asset.warranty_end_date)}</p>
                 <p>Expiry: {formatDate(asset.expiry_date)}</p>
                 <p>Return date: {formatDate(asset.return_date)}</p>
-                <p>Assignment type: {asset.assignment_type ?? asset.usage_type ?? "-"}</p>
               </CardContent>
             </Card>
           </div>

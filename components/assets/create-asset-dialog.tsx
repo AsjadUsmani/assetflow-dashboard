@@ -29,7 +29,7 @@ import { getAssetTypes } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
 import { getWorkspaceUsers } from "@/lib/services/workspace-users";
-import { createAsset, type CreateAssetBody } from "@/lib/services/assets";
+import { assetStatusOptions, createAsset, type CreateAssetBody } from "@/lib/services/assets";
 import type { AssetType } from "@/lib/services/asset-types";
 import type { Location } from "@/lib/services/locations";
 import type { Department } from "@/lib/services/departments";
@@ -55,7 +55,6 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [departmentId, setDepartmentId] = useState("");
   const [assignedUserId, setAssignedUserId] = useState("");
   const [assignedDate, setAssignedDate] = useState("");
-  const [assignmentType, setAssignmentType] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [remark, setRemark] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
@@ -139,7 +138,6 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setDepartmentId("");
       setAssignedUserId("");
       setAssignedDate("");
-      setAssignmentType("");
       setReturnDate("");
       setRemark("");
       setPurchaseDate("");
@@ -205,7 +203,6 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         warranty_end_date: warrantyEndDate || undefined,
         expiry_date: expiryDate || undefined,
         assigned_date: assignedDate || undefined,
-        assignment_type: assignmentType || undefined,
         return_date: returnDate || undefined,
         remark: remark.trim() || undefined,
         property_values: Object.keys(pv).length > 0 ? pv : undefined,
@@ -321,17 +318,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
                 onValueChange={setStatus}
                 placeholder="Select status"
                 searchPlaceholder="Search status..."
-                options={[
-                  { value: "available", label: "Available" },
-                  { value: "assigned", label: "Assigned" },
-                  { value: "in_maintenance", label: "In Maintenance" },
-                  { value: "in_stock", label: "In Stock" },
-                  { value: "in_use", label: "In Use" },
-                  { value: "retired", label: "Retired" },
-                  { value: "lost", label: "Lost" },
-                  { value: "pending_disposal", label: "Pending for Disposal" },
-                  { value: "disposed", label: "Disposed" },
-                ]}
+                options={assetStatusOptions.map((option) => ({ value: option.value, label: option.label }))}
               />
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
@@ -375,19 +362,6 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
               <div className="space-y-2 min-w-0">
                 <Label htmlFor="assignedDate">Assigned Date</Label>
                 <Input id="assignedDate" type="date" className="bg-secondary border-0" value={assignedDate} onChange={(e) => setAssignedDate(e.target.value)} />
-              </div>
-              <div className="space-y-2 min-w-0">
-                <Label>Assignment Type</Label>
-                <SearchableSelect
-                  value={assignmentType}
-                  onValueChange={setAssignmentType}
-                  placeholder="Permanent or Loaner"
-                  searchPlaceholder="Search..."
-                  options={[
-                    { value: "Permanent", label: "Permanent" },
-                    { value: "Loaner", label: "Loaner" },
-                  ]}
-                />
               </div>
               <div className="space-y-2 min-w-0">
                 <Label htmlFor="returnDate">Return Date</Label>

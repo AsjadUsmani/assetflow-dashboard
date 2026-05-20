@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { getAssetById, updateAsset, type Asset, type UpdateAssetBody } from "@/lib/services/assets";
+import { assetStatusOptions, getAssetById, updateAsset, type Asset, type UpdateAssetBody } from "@/lib/services/assets";
 import { getAssetTypeById } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
@@ -58,7 +58,6 @@ export function EditAssetClient() {
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [assignedDate, setAssignedDate] = useState("");
-  const [assignmentType, setAssignmentType] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [remark, setRemark] = useState("");
   const [propertyValues, setPropertyValues] = useState<Record<string, string | number | boolean>>({});
@@ -111,7 +110,6 @@ export function EditAssetClient() {
         setWarrantyEndDate(toDateInputValue(a.warranty_end_date));
         setExpiryDate(toDateInputValue(a.expiry_date));
         setAssignedDate(toDateInputValue(a.assigned_date));
-        setAssignmentType(a.assignment_type ?? a.usage_type ?? "");
         setReturnDate(toDateInputValue(a.return_date));
         setRemark(a.remark ?? "");
         const pv: Record<string, string | number | boolean> = {};
@@ -199,7 +197,6 @@ export function EditAssetClient() {
         warranty_end_date: warrantyEndDate || null,
         expiry_date: expiryDate || null,
         assigned_date: assignedDate || null,
-        assignment_type: assignmentType || null,
         return_date: returnDate || null,
         remark: remark.trim() || null,
         property_values: Object.keys(pv).length > 0 ? pv : null,
@@ -332,17 +329,7 @@ export function EditAssetClient() {
                   onValueChange={setStatus}
                   placeholder="Select status"
                   searchPlaceholder="Search status..."
-                  options={[
-                    { value: "available", label: "Available" },
-                    { value: "assigned", label: "Assigned" },
-                    { value: "in_maintenance", label: "In Maintenance" },
-                    { value: "in_stock", label: "In Stock" },
-                    { value: "in_use", label: "In Use" },
-                    { value: "retired", label: "Retired" },
-                    { value: "lost", label: "Lost" },
-                    { value: "pending_disposal", label: "Pending for Disposal" },
-                    { value: "disposed", label: "Disposed" },
-                  ]}
+                  options={assetStatusOptions.map((option) => ({ value: option.value, label: option.label }))}
                 />
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
@@ -386,19 +373,6 @@ export function EditAssetClient() {
                 <div className="space-y-2 min-w-0">
                   <Label>Assigned Date</Label>
                   <Input type="date" value={assignedDate} onChange={(e) => setAssignedDate(e.target.value)} className="bg-secondary border-0" />
-                </div>
-                <div className="space-y-2 min-w-0">
-                  <Label>Assignment Type</Label>
-                  <SearchableSelect
-                    value={assignmentType}
-                    onValueChange={setAssignmentType}
-                    placeholder="Permanent or Loaner"
-                    searchPlaceholder="Search..."
-                    options={[
-                      { value: "Permanent", label: "Permanent" },
-                      { value: "Loaner", label: "Loaner" },
-                    ]}
-                  />
                 </div>
                 <div className="space-y-2 min-w-0">
                   <Label>Return Date</Label>
