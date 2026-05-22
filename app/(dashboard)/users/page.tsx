@@ -126,6 +126,7 @@ type UserRow = {
   city: string | null
   office: string | null
   is_active: boolean
+  email_on_hold: boolean
   last_login: string | null
 }
 
@@ -154,17 +155,17 @@ export default function UsersPage() {
   const [pagination, setPagination] = React.useState<UsersPageResponse["pagination"] | null>(null)
   const [page, setPage] = React.useState(1)
   const [roles, setRoles] = React.useState<{ id: number; name: string }[]>([])
+  const [limit, setLimit] = React.useState(20)
   const { toast } = useToast()
 
   const loadUsers = React.useCallback(async () => {
-    setIsLoading(true)
     try {
       const res = await getWorkspaceUsersPage({
         search: search.trim() || undefined,
         role: roleFilter === "all" ? undefined : roleFilter,
         status: statusFilter === "all" ? undefined : (statusFilter as "active" | "inactive"),
         page,
-        limit: 20,
+        limit,
       })
       setUsers(res.items)
       setPagination(res.pagination)
@@ -174,7 +175,7 @@ export default function UsersPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [page, roleFilter, search, statusFilter])
+  }, [page, limit, roleFilter, search, statusFilter])
 
   React.useEffect(() => {
     void loadUsers()
@@ -186,7 +187,7 @@ export default function UsersPage() {
 
   React.useEffect(() => {
     setPage(1)
-  }, [search, roleFilter, statusFilter])
+  }, [search, roleFilter, statusFilter, limit])
 
   const handleDownloadSampleCsv = async () => {
     try {
@@ -564,9 +565,16 @@ export default function UsersPage() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="secondary" className={status.color}>
-                                {status.label}
-                              </Badge>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className={status.color}>
+                                  {status.label}
+                                </Badge>
+                                {user.email_on_hold && (
+                                  <Badge variant="outline" className="border-amber-500/20 bg-amber-500/10 text-amber-600 dark:border-amber-400/20 dark:text-amber-400">
+                                    Hold
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground">
                               {user.last_login
@@ -630,6 +638,7 @@ export default function UsersPage() {
                 pagination={pagination}
                 label="users"
                 onPageChange={setPage}
+                onLimitChange={setLimit}
               />
             </Card>
           </>

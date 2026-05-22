@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart,
@@ -11,12 +11,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { getAssets, type Asset } from "@/lib/services/assets";
-import { getLocations, type Location } from "@/lib/services/locations";
-import {
-  isInDateRange,
-  type DashboardFilterState,
-} from "@/components/dashboard/filters";
+import { type Asset } from "@/lib/services/assets";
+import { type Location } from "@/lib/services/locations";
 
 const CustomTooltip = ({
   active,
@@ -50,36 +46,7 @@ type ChartRow = {
   assigned: number;
 };
 
-export function AssetsByLocation({ filters }: { filters: DashboardFilterState }) {
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-
-  useEffect(() => {
-    const location = filters.location ? Number(filters.location) : undefined;
-    const department = filters.department ? Number(filters.department) : undefined;
-    const assetType = filters.assetType ? Number(filters.assetType) : undefined;
-
-    let isMounted = true;
-    (async () => {
-      try {
-        const [assetsData, locationsData] = await Promise.all([
-          getAssets({ location, department, assetType }),
-          getLocations(),
-        ]);
-        if (!isMounted) return;
-        setAssets(
-          assetsData.filter((asset) => isInDateRange(asset.created_at, filters.dateRange)),
-        );
-        setLocations(locationsData);
-      } catch {
-        // ignore; dashboard can show empty chart on error
-      }
-    })();
-    return () => {
-      isMounted = false;
-    };
-  }, [filters]);
-
+export function AssetsByLocation({ filteredAssets, locations }: { filteredAssets: Asset[], locations: Location[] }) {
   const data: ChartRow[] = useMemo(() => {
     if (!locations.length) return [];
     const byLocation: Record<
@@ -88,21 +55,19 @@ export function AssetsByLocation({ filters }: { filters: DashboardFilterState })
     > = {};
 
     locations.forEach((loc) => {
-      byLocation[loc.id] = {
-        name: loc.name,
-        assets: 0,
-        available: 0,
-        assigned: 0,
-      };
+      byLocation[loc.id] = { name: loc.name, assets: 0, available: 0, assigned: 0 };
     });
 
-    assets.forEach((asset) => {
+    filteredAssets.forEach((asset) => {
       if (!asset.location_id) return;
       const bucket = byLocation[asset.location_id];
       if (!bucket) return;
       bucket.assets += 1;
-      if (asset.status === "available") bucket.available += 1;
-      else bucket.assigned += 1;
+      if (asset.status === "available" || asset.status === "in_stock") {
+        bucket.available += 1;
+      } else {
+        bucket.assigned += 1;
+      }
     });
 
     return Object.values(byLocation)
@@ -112,7 +77,7 @@ export function AssetsByLocation({ filters }: { filters: DashboardFilterState })
         return a.name.localeCompare(b.name);
       })
       .slice(0, 5);
-  }, [assets, locations]);
+  }, [filteredAssets, locations]);
 
   return (
     <Card className="bg-card border-border">
@@ -122,7 +87,7 @@ export function AssetsByLocation({ filters }: { filters: DashboardFilterState })
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-70">
+        <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} layout="vertical" barGap={4}>
               <CartesianGrid

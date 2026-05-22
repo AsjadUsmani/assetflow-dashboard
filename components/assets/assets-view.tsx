@@ -68,6 +68,7 @@ export function AssetsView() {
   const [error, setError] = React.useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = React.useState(false);
   const [page, setPage] = React.useState(1);
+  const [limit, setLimit] = React.useState(20);
   const [pagination, setPagination] = React.useState<{
     page: number;
     limit: number;
@@ -142,7 +143,7 @@ export function AssetsView() {
     if (filters.department) query.department = Number(filters.department);
     if (filters.search.trim()) query.search = filters.search.trim();
     query.page = page;
-    query.limit = 20;
+    query.limit = limit;
     try {
       const data = await getAssetsPage(query);
       setAssets(data.items);
@@ -154,7 +155,7 @@ export function AssetsView() {
     } finally {
       setLoading(false);
     }
-  }, [filters.assetType, filters.status, filters.location, filters.department, filters.search, page]);
+  }, [filters.assetType, filters.status, filters.location, filters.department, filters.search, page, limit]);
 
   React.useEffect(() => {
     loadOptions();
@@ -183,7 +184,7 @@ export function AssetsView() {
 
   React.useEffect(() => {
     setPage(1);
-  }, [filters.assetType, filters.status, filters.location, filters.department, filters.search, presetFromUrl, dateRangeFromUrl]);
+  }, [filters.assetType, filters.status, filters.location, filters.department, filters.search, presetFromUrl, dateRangeFromUrl, limit]);
 
   React.useEffect(() => {
     loadAssets();
@@ -259,6 +260,7 @@ export function AssetsView() {
         onRefresh={loadAssets}
         pagination={pagination}
         onPageChange={setPage}
+        onLimitChange={setLimit}
       />
     </>
   );

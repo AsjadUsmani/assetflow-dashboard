@@ -62,6 +62,7 @@ export default function DepartmentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [pagination, setPagination] = useState<{
     page: number
     limit: number
@@ -76,7 +77,7 @@ export default function DepartmentsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getDepartmentsPage({ search: searchQuery.trim() || undefined, page, limit: 20 });
+      const data = await getDepartmentsPage({ search: searchQuery.trim() || undefined, page, limit });
       setDepartments(data.items);
       setPagination(data.pagination);
     } catch (err) {
@@ -85,7 +86,7 @@ export default function DepartmentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchQuery]);
+  }, [page, limit, searchQuery]);
 
   useEffect(() => {
     void loadDepartments();
@@ -93,7 +94,7 @@ export default function DepartmentsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, limit]);
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -333,6 +334,7 @@ export default function DepartmentsPage() {
                 pagination={pagination}
                 label="departments"
                 onPageChange={setPage}
+                onLimitChange={setLimit}
               />
             </CardContent>
           </Card>

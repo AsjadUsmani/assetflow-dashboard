@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 
 import {
   Monitor,
@@ -12,10 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { getAssets, type Asset } from "@/lib/services/assets";
-import {
-  type DashboardFilterState,
-} from "@/components/dashboard/filters";
+import { type Asset } from "@/lib/services/assets";
 
 interface StockItem {
   category: string;
@@ -29,33 +26,7 @@ interface StockItem {
 
 const ICONS = [Monitor, Projector, Mouse, Wrench];
 
-export function StockOverview({ filters }: { filters: DashboardFilterState }) {
-  const [assets, setAssets] = useState<Asset[]>([]);
-
-  useEffect(() => {
-    const location = filters.location ? Number(filters.location) : undefined;
-    const department = filters.department ? Number(filters.department) : undefined;
-    const assetType = filters.assetType ? Number(filters.assetType) : undefined;
-
-    let isMounted = true;
-    (async () => {
-      try {
-        const data = await getAssets({ location, department, assetType });
-        if (!isMounted) return;
-        // STOCK OVERVIEW: Show all assets regardless of creation date
-        // Stock is a snapshot of current inventory, not filtered by activity date
-        // This ensures accurate inventory counts even for older assets
-        setAssets(data);
-      } catch {
-        // ignore; panel can render empty state
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [filters.location, filters.department, filters.assetType]);
-
+export function StockOverview({ assets }: { assets: Asset[] }) {
   const stockData: StockItem[] = useMemo(() => {
     const buckets: Record<string, { total: number; available: number; assigned: number }> = {};
 
@@ -65,8 +36,12 @@ export function StockOverview({ filters }: { filters: DashboardFilterState }) {
         buckets[key] = { total: 0, available: 0, assigned: 0 };
       }
       buckets[key].total += 1;
-      if (asset.status === "available") buckets[key].available += 1;
-      else buckets[key].assigned += 1;
+      // Count in_stock and available as "available" inventory
+      if (asset.status === "available" || asset.status === "in_stock") {
+        buckets[key].available += 1;
+      } else {
+        buckets[key].assigned += 1;
+      }
     });
 
     return Object.entries(buckets)

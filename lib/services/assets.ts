@@ -163,7 +163,7 @@ export async function getAssets(query?: ListAssetsQuery): Promise<Asset[]> {
 }
 
 export async function getAssetsPage(query: AssetListPageQuery): Promise<PaginatedResponse<Asset>> {
-  const url = `${BASE}${buildQuery(query)}${buildPaginationQuery(query)}`
+  const url = `${BASE}${buildPaginationQuery(query)}`
   const json = await apiService.get<PaginatedResponse<Asset>>(url, true)
   return json.data ?? { items: [], pagination: { page: 1, limit: 20, total: 0, total_pages: 0, has_next_page: false, has_previous_page: false } }
 }

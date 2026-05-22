@@ -45,6 +45,7 @@ type User = {
   designation_name: string | null
   office: "INDIA_HO" | "TRADITIONAL" | "VIP" | "INDIA_RO" | null
   is_active: boolean
+  email_on_hold: boolean
   last_login: string | null
   created_at?: string
   updated_at?: string
@@ -233,10 +234,15 @@ export default function UserDetailsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Status</Label>
-                  <div>
+                  <div className="flex items-center gap-2">
                     <Badge variant={user.is_active ? "default" : "secondary"}>
                       {user.is_active ? "Active" : "Terminated"}
                     </Badge>
+                    {user.email_on_hold && (
+                      <Badge variant="outline" className="border-amber-500/20 bg-amber-500/10 text-amber-600 dark:border-amber-400/20 dark:text-amber-400">
+                        Hold
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">

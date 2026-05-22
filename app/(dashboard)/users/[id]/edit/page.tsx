@@ -396,18 +396,25 @@ export default function EditUserPage() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="isActive">Account status</Label>
-                      <Select
-                        value={isActive ? "active" : "inactive"}
-                        onValueChange={(value) => setIsActive(value === "active")}
-                      >
-                        <SelectTrigger id="isActive">
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Terminated</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={isActive ? "active" : "inactive"}
+                          onValueChange={(value) => setIsActive(value === "active")}
+                        >
+                          <SelectTrigger id="isActive" className="w-full">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Terminated</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {emailOnHold && (
+                          <div className="flex h-9 shrink-0 items-center justify-center rounded-md border border-amber-500/20 bg-amber-500/10 px-3 text-xs font-semibold text-amber-600 dark:border-amber-400/20 dark:text-amber-400">
+                            Hold
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-start gap-2">
                       <Checkbox

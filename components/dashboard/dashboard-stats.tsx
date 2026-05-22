@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import {
   Package,
@@ -13,17 +13,14 @@ import {
   FileText,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { getAssets } from "@/lib/services/assets";
-import { getRequests, type AssetRequest } from "@/lib/services/requests";
+import { type Asset } from "@/lib/services/assets";
+import { type AssetRequest } from "@/lib/services/requests";
 import {
   hasMissingNonCompulsoryInfo,
   isWarrantyEndingWithinDays,
   type AssetPresetFilter,
 } from "@/lib/asset-insights";
-import {
-  isInDateRange,
-  type DashboardFilterState,
-} from "@/components/dashboard/filters";
+import { type DashboardFilterState } from "@/components/dashboard/filters";
 
 type Stat = {
   title: string;
@@ -44,12 +41,13 @@ type AlertStat = {
   description: string;
 };
 
-export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
-  const [assetCount, setAssetCount] = useState<number>(0);
-  const [missingInfoCount, setMissingInfoCount] = useState<number>(0);
-  const [warrantyEndingSoonCount, setWarrantyEndingSoonCount] = useState<number>(0);
-  const [requests, setRequests] = useState<AssetRequest[]>([]);
+type Props = {
+  filters: DashboardFilterState;
+  filteredAssets: Asset[];
+  filteredRequests: AssetRequest[];
+};
 
+export function DashboardStats({ filters, filteredAssets, filteredRequests }: Props) {
   const buildAssetsHref = (preset?: AssetPresetFilter) => {
     const params = new URLSearchParams();
     if (preset) params.set("preset", preset);
@@ -59,60 +57,44 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
     if (filters.dateRange && filters.dateRange !== "all") {
       params.set("dateRange", filters.dateRange);
     }
-    const query = params.toString();
-    return query ? `/assets?${query}` : "/assets";
+    const qs = params.toString();
+    return qs ? `/assets?${qs}` : "/assets";
   };
 
-  useEffect(() => {
-    const location = filters.location ? Number(filters.location) : undefined;
-    const department = filters.department ? Number(filters.department) : undefined;
-    const assetType = filters.assetType ? Number(filters.assetType) : undefined;
+  const { assetCount, missingInfoCount, warrantyEndingSoonCount } = useMemo(() => {
+    let missing = 0;
+    let warrantyEnding = 0;
 
-    let isMounted = true;
-    (async () => {
-      try {
-        const [assetsData, requestsData] = await Promise.all([
-          getAssets({ location, department, assetType }),
-          getRequests(),
-        ]);
-        if (!isMounted) return;
-        const filteredAssets = assetsData.filter((asset) =>
-          isInDateRange(asset.created_at, filters.dateRange),
-        );
-        const assetIds = new Set(filteredAssets.map((asset) => asset.id));
-        const filteredRequests = requestsData.filter((request) => {
-          const matchesDate = isInDateRange(request.created_at, filters.dateRange);
-          if (!matchesDate) return false;
-          if (request.asset_id == null) return true;
-          return assetIds.has(request.asset_id);
-        });
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const thirtyDaysOut = startOfDay + 30 * 24 * 60 * 60 * 1000;
 
-        setAssetCount(filteredAssets.length);
-        setMissingInfoCount(filteredAssets.filter(hasMissingNonCompulsoryInfo).length);
-        setWarrantyEndingSoonCount(
-          filteredAssets.filter((asset) => isWarrantyEndingWithinDays(asset, 30)).length,
-        );
-        setRequests(filteredRequests);
-      } catch {
-        // ignore; global error handler can surface issues if needed
+    for (const asset of filteredAssets) {
+      if (hasMissingNonCompulsoryInfo(asset)) missing++;
+      if (asset.warranty_end_date) {
+        const t = new Date(asset.warranty_end_date).getTime();
+        if (!Number.isNaN(t) && t >= startOfDay && t <= thirtyDaysOut) warrantyEnding++;
       }
-    })();
-    return () => {
-      isMounted = false;
+    }
+
+    return {
+      assetCount: filteredAssets.length,
+      missingInfoCount: missing,
+      warrantyEndingSoonCount: warrantyEnding,
     };
-  }, [filters]);
+  }, [filteredAssets]);
 
   const { stats, alertStats } = useMemo(() => {
-    const pending = requests.filter((r) =>
+    const pending = filteredRequests.filter((r) =>
       ["pending", "in_review"].includes(r.status),
     ).length;
     const today = new Date().toDateString();
-    const approvedToday = requests.filter(
-      (r) => r.status === "approved" && r.decided_at && new Date(r.decided_at).toDateString() === today,
+    const approvedToday = filteredRequests.filter(
+      (r) =>
+        r.status === "approved" &&
+        r.decided_at &&
+        new Date(r.decided_at).toDateString() === today,
     ).length;
-
-    const expiringSoon = 0; // can be derived from assets with expiry_date in future enhancement
-    const accountabilityGaps = 0; // can be derived from assets without assignment in future enhancement
 
     const stats: Stat[] = [
       {
@@ -125,7 +107,7 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
         href: buildAssetsHref(),
       },
       {
-        title: "Assets have missing information",
+        title: "Assets with missing information",
         value: missingInfoCount.toLocaleString(),
         change: null,
         trend: "neutral",
@@ -142,59 +124,12 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
         description: "Assets with warranty close to expiry",
         href: buildAssetsHref("warranty-ending-soon"),
       },
-      /*
-      {
-        title: "Pending Approvals",
-        value: pending.toString(),
-        change: null,
-        trend: "neutral",
-        icon: Clock,
-        description: "Awaiting your review",
-        href: "/requests?status=pending",
-        highlight: pending > 0,
-      },
-      {
-        title: "Approved Today",
-        value: approvedToday.toString(),
-        change: null,
-        trend: "neutral",
-        icon: CheckCircle,
-        description: "Requests approved today",
-        href: "/requests?status=approved",
-      },
-      {
-        title: "Total Requests",
-        value: requests.length.toString(),
-        change: null,
-        trend: "neutral",
-        icon: FileText,
-        description: "All time",
-        href: "/requests",
-      },
-      */
     ];
 
-    const alertStats: AlertStat[] = [
-      /*
-      {
-        title: "Expiring Soon",
-        value: expiringSoon,
-        icon: AlertTriangle,
-        variant: "warning",
-        description: "Within 30 days",
-      },
-      {
-        title: "Accountability Gaps",
-        value: accountabilityGaps,
-        icon: UserX,
-        variant: "destructive",
-        description: "Missing assignments",
-      },
-      */
-    ];
+    const alertStats: AlertStat[] = [];
 
     return { stats, alertStats };
-  }, [assetCount, missingInfoCount, warrantyEndingSoonCount, requests]);
+  }, [assetCount, missingInfoCount, warrantyEndingSoonCount, filteredRequests]);
 
   return (
     <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
@@ -234,12 +169,8 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
                 >
                   {stat.value}
                 </p>
-                <p className="text-sm font-medium text-foreground">
-                  {stat.title}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {stat.description}
-                </p>
+                <p className="text-sm font-medium text-foreground">{stat.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{stat.description}</p>
               </div>
             </CardContent>
           </Card>
@@ -276,9 +207,7 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
               >
                 <stat.icon
                   className={`size-5 ${
-                    stat.variant === "warning"
-                      ? "text-warning"
-                      : "text-destructive"
+                    stat.variant === "warning" ? "text-warning" : "text-destructive"
                   }`}
                 />
               </div>
@@ -292,9 +221,7 @@ export function DashboardStats({ filters }: { filters: DashboardFilterState }) {
               >
                 {stat.title}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {stat.description}
-              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">{stat.description}</p>
             </div>
           </CardContent>
         </Card>

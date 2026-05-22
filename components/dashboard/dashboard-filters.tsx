@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { CalendarIcon, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,42 +10,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { getLocations, type Location } from "@/lib/services/locations";
-import { getDepartments, type Department } from "@/lib/services/departments";
-import { getAssetTypes, type AssetType } from "@/lib/services/asset-types";
+import { type Location } from "@/lib/services/locations";
+import { type Department } from "@/lib/services/departments";
+import { type AssetType } from "@/lib/services/asset-types";
 import type { DashboardFilterState } from "./filters";
 
 type DashboardFiltersProps = {
   value: DashboardFilterState;
   onChange: (value: DashboardFilterState) => void;
+  locations: Location[];
+  departments: Department[];
+  assetTypes: AssetType[];
 };
 
-export function DashboardFilters({ value, onChange }: DashboardFiltersProps) {
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const [locs, depts, types] = await Promise.all([
-          getLocations(),
-          getDepartments(),
-          getAssetTypes(),
-        ]);
-        if (!isMounted) return;
-        setLocations(locs);
-        setDepartments(depts);
-        setAssetTypes(types);
-      } catch {
-        // ignore; filters can degrade gracefully
-      }
-    })();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+export function DashboardFilters({ value, onChange, locations, departments, assetTypes }: DashboardFiltersProps) {
 
   const activeFilters = Object.entries(value).filter(
     ([key, value]) => value && key !== "dateRange"

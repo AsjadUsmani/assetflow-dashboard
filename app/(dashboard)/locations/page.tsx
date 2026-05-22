@@ -60,6 +60,7 @@ export default function LocationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [pagination, setPagination] = useState<{
     page: number
     limit: number
@@ -74,7 +75,7 @@ export default function LocationsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getLocationsPage({ search: searchQuery.trim() || undefined, page, limit: 20 });
+      const data = await getLocationsPage({ search: searchQuery.trim() || undefined, page, limit });
       setLocations(data.items);
       setPagination(data.pagination);
     } catch (err) {
@@ -83,7 +84,7 @@ export default function LocationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchQuery]);
+  }, [page, limit, searchQuery]);
 
   useEffect(() => {
     void loadLocations();
@@ -91,7 +92,7 @@ export default function LocationsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, limit]);
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -334,6 +335,7 @@ export default function LocationsPage() {
                 pagination={pagination}
                 label="locations"
                 onPageChange={setPage}
+                onLimitChange={setLimit}
               />
             </CardContent>
           </Card>

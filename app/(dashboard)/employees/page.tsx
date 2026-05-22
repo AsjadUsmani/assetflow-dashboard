@@ -85,6 +85,7 @@ export default function EmployeesPage() {
   const [importDialogOpen, setImportDialogOpen] = React.useState(false)
   const [actionEmployeeId, setActionEmployeeId] = React.useState<number | null>(null)
   const [page, setPage] = React.useState(1)
+  const [limit, setLimit] = React.useState(20)
   const [pagination, setPagination] = React.useState<{
     page: number
     limit: number
@@ -96,13 +97,12 @@ export default function EmployeesPage() {
   const { toast } = useToast()
 
   const loadEmployees = React.useCallback(async () => {
-    setIsLoading(true)
     try {
       const rows = await getEmployeesPage({
         search: search.trim() || undefined,
         status: statusFilter === "all" ? undefined : (statusFilter as "active" | "inactive"),
         page,
-        limit: 20,
+        limit,
       })
       setEmployees(rows.items)
       setPagination(rows.pagination)
@@ -112,7 +112,7 @@ export default function EmployeesPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [page, search, statusFilter])
+  }, [page, limit, search, statusFilter])
 
   React.useEffect(() => {
     void loadEmployees()
@@ -120,7 +120,7 @@ export default function EmployeesPage() {
 
   React.useEffect(() => {
     setPage(1)
-  }, [search, statusFilter])
+  }, [search, statusFilter, limit])
 
   const handleDownloadSampleCsv = async () => {
     try {
@@ -422,6 +422,7 @@ export default function EmployeesPage() {
                   pagination={pagination}
                   label="employees"
                   onPageChange={setPage}
+                  onLimitChange={setLimit}
                 />
               </CardContent>
             </Card>

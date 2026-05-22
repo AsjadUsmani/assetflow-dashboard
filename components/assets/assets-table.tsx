@@ -42,6 +42,7 @@ export function AssetsTable({
   onRefresh,
   pagination,
   onPageChange,
+  onLimitChange,
 }: {
   assets: Asset[];
   loading: boolean;
@@ -49,6 +50,7 @@ export function AssetsTable({
   onRefresh: () => void;
   pagination?: PaginationState | null;
   onPageChange?: (page: number) => void;
+  onLimitChange?: (limit: number) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const router = useRouter();
@@ -214,6 +216,7 @@ export function AssetsTable({
               pagination={pagination}
               label="assets"
               onPageChange={onPageChange}
+              onLimitChange={onLimitChange}
             />
           ) : (
             <div className="flex items-center justify-between border-t border-border px-4 py-3">
