@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, FolderTree, Search } from "lucide-react";
@@ -42,7 +42,7 @@ import { createDepartment } from "@/lib/services/departments";
 import type { Location } from "@/lib/services/locations";
 import type { WorkspaceUser } from "@/lib/services/workspace-users";
 
-export default function NewDepartmentPage() {
+function NewDepartmentForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetLocationId = Number(searchParams.get("location_id") ?? "");
@@ -110,15 +110,7 @@ export default function NewDepartmentPage() {
   };
 
   return (
-    <>
-      <AppHeader
-        breadcrumbs={[
-          { label: "Overview", href: "/dashboard" },
-          { label: "Departments", href: "/departments" },
-          { label: "New Department" },
-        ]}
-      />
-      <main className="flex-1 overflow-auto p-6">
+    <main className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-2xl space-y-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
@@ -293,7 +285,23 @@ export default function NewDepartmentPage() {
             </Card>
           </form>
         </div>
-      </main>
+    </main>
+  );
+}
+
+export default function NewDepartmentPage() {
+  return (
+    <>
+      <AppHeader
+        breadcrumbs={[
+          { label: "Overview", href: "/dashboard" },
+          { label: "Departments", href: "/departments" },
+          { label: "New Department" },
+        ]}
+      />
+      <Suspense fallback={<main className="flex-1 p-6 text-sm text-muted-foreground">Loading...</main>}>
+        <NewDepartmentForm />
+      </Suspense>
     </>
   );
 }
