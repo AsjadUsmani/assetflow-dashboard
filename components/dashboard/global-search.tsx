@@ -157,7 +157,8 @@ export function GlobalSearch() {
       if (dept.name.toLowerCase().includes(searchQuery)) {
         const locationName =
           dept.location_name ??
-          locations.find((l) => l.id === dept.location_id)?.name ??
+          (dept.location_names[0] ??
+          locations.find((l) => dept.location_ids.includes(l.id))?.name) ??
           "Unknown";
         searchResults.push({
           id: String(dept.id),

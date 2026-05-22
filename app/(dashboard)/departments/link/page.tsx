@@ -78,6 +78,7 @@ export default function LinkUserDepartmentPage() {
         if (!term) return true;
         return (
           d.name.toLowerCase().includes(term) ||
+          (d.location_names.some((n) => n.toLowerCase().includes(term))) ||
           (d.location_name && d.location_name.toLowerCase().includes(term)) ||
           (d.hod_name && d.hod_name.toLowerCase().includes(term))
         );
@@ -247,15 +248,17 @@ export default function LinkUserDepartmentPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            {dept.email && (
-                              <span className="text-xs text-muted-foreground">
-                                {dept.email}
-                              </span>
-                            )}
-                            {dept.phone && (
-                              <Badge variant="outline" className="w-fit text-xs">
-                                {dept.phone}
-                              </Badge>
+                            {dept.venue_contacts.length > 0 ? (
+                              dept.venue_contacts.map((vc) => (
+                                <div key={vc.location_id} className="text-xs">
+                                  <span className="font-medium">{vc.location_name}: </span>
+                                  <span className="text-muted-foreground">
+                                    {vc.phone ?? "—"} · {vc.email ?? "—"}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </div>
                         </TableCell>

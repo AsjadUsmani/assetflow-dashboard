@@ -79,11 +79,11 @@ export default function LocationDetailPage({
         return;
       }
       setId(p.id);
-      Promise.all([getLocationById(numId), getDepartments()])
+      Promise.all([getLocationById(numId), getDepartments(numId)])
         .then(([loc, depts]) => {
           if (cancelled) return;
           setLocation(loc ?? null);
-          setDepartments(depts.filter((d) => d.location_id === numId));
+          setDepartments(depts);
         })
         .catch((err) => {
           if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");

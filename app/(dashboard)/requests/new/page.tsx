@@ -502,7 +502,7 @@ function NewRequestForm() {
                         .filter(
                           (d) =>
                             !formData.toLocationId ||
-                            d.location_id === Number(formData.toLocationId)
+                            d.location_ids.includes(Number(formData.toLocationId))
                         )
                         .map((dept) => (
                           <SelectItem key={dept.id} value={String(dept.id)}>

@@ -69,7 +69,7 @@ export function EditAssetClient() {
     [assetType],
   );
   const filteredDepartments = locationId
-    ? departments.filter((d) => String(d.location_id) === locationId)
+    ? departments.filter((d) => d.location_ids.includes(Number(locationId)))
     : departments;
   const assignableUsers = users.filter((u) => u.is_active || u.email_on_hold);
   const canSave = Boolean(asset) && !saving && Boolean(assignedUserId);

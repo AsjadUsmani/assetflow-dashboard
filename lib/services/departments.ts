@@ -1,14 +1,23 @@
 import { apiService } from "./api-service"
 import { buildPaginationQuery, type ListPaginationQuery, type PaginatedResponse } from "@/lib/services/pagination"
 
+export type DepartmentVenueContact = {
+  location_id: number
+  location_name: string
+  phone: string | null
+  email: string | null
+}
+
 export type Department = {
   id: number
-  location_id: number
-  location_name?: string
-  organization_id?: number
-  organization_name?: string
   name: string
   code: string | null
+  location_ids: number[]
+  location_names: string[]
+  location_name?: string
+  venue_contacts: DepartmentVenueContact[]
+  organization_id?: number
+  organization_name?: string
   hod_id: number | null
   hod_name?: string | null
   phone: string | null
@@ -18,13 +27,18 @@ export type Department = {
   assets_count?: number
 }
 
-export type CreateDepartmentBody = {
+export type DepartmentVenueContactInput = {
   location_id: number
+  phone?: string | null
+  email?: string | null
+}
+
+export type CreateDepartmentBody = {
   name: string
+  location_ids: number[]
+  venue_contacts?: DepartmentVenueContactInput[]
   code?: string
   hod_id?: number
-  phone?: string
-  email?: string
   description?: string
 }
 
@@ -32,12 +46,14 @@ export type UpdateDepartmentBody = Partial<CreateDepartmentBody>
 
 export type DepartmentListQuery = ListPaginationQuery & {
   search?: string
+  location_id?: number
 }
 
 const BASE = "/workspace/departments"
 
-export async function getDepartments(): Promise<Department[]> {
-  const json = await apiService.get<Department[]>(BASE, true)
+export async function getDepartments(locationId?: number): Promise<Department[]> {
+  const params = locationId != null ? `?location_id=${locationId}` : ""
+  const json = await apiService.get<Department[]>(`${BASE}${params}`, true)
   return json.data ?? []
 }
 

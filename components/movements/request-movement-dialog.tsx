@@ -211,7 +211,7 @@ export function RequestMovementDialog() {
                     {departments
                       .filter(
                         (d) =>
-                          !fromLocationId || d.location_id === Number(fromLocationId),
+                          !fromLocationId || d.location_ids.includes(Number(fromLocationId)),
                       )
                       .map((dept) => (
                         <SelectItem key={dept.id} value={String(dept.id)}>
@@ -235,7 +235,7 @@ export function RequestMovementDialog() {
                     {departments
                       .filter(
                         (d) =>
-                          !toLocationId || d.location_id === Number(toLocationId),
+                          !toLocationId || d.location_ids.includes(Number(toLocationId)),
                       )
                       .map((dept) => (
                         <SelectItem key={dept.id} value={String(dept.id)}>

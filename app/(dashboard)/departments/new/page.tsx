@@ -46,14 +46,18 @@ export default function NewDepartmentPage() {
   const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
-  const [locationId, setLocationId] = useState<string>("");
+  const [selectedLocationIds, setSelectedLocationIds] = useState<number[]>([]);
+  const [venueContacts, setVenueContacts] = useState<
+    Record<number, { phone: string; email: string }>
+  >({});
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
   const [hodId, setHodId] = useState<string>("none");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedLocation =
-    locations.find((loc) => String(loc.id) === locationId) ?? null;
+  const selectedLocations = locations.filter((loc) =>
+    selectedLocationIds.includes(loc.id),
+  );
 
   useEffect(() => {
     Promise.all([getLocations(), getWorkspaceUsers()])
@@ -70,25 +74,24 @@ export default function NewDepartmentPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    const locId = Number(locationId);
-    if (Number.isNaN(locId) || !locationId) {
-      setError("Please select a location");
+    if (selectedLocationIds.length === 0) {
+      setError("Please select at least one location");
       return;
     }
     const form = e.currentTarget;
     const name = (form.querySelector("#name") as HTMLInputElement).value.trim();
-    const phone = (form.querySelector("#phone") as HTMLInputElement)?.value?.trim() || undefined;
-    const email = (form.querySelector("#email") as HTMLInputElement)?.value?.trim() || undefined;
-
     if (!name) return;
     setIsSubmitting(true);
     try {
       await createDepartment({
-        location_id: locId,
+        location_ids: selectedLocationIds,
         name,
         hod_id: hodId !== "none" ? Number(hodId) : undefined,
-        phone,
-        email,
+        venue_contacts: selectedLocationIds.map((location_id) => ({
+          location_id,
+          phone: venueContacts[location_id]?.phone?.trim() || null,
+          email: venueContacts[location_id]?.email?.trim() || null,
+        })),
       });
       router.push("/departments");
     } catch (err) {
@@ -119,7 +122,7 @@ export default function NewDepartmentPage() {
                 Add New Department
               </h1>
               <p className="text-sm text-muted-foreground">
-                Create a new department within a location
+                Create a department and map it to one or more locations
               </p>
             </div>
           </div>
@@ -142,7 +145,7 @@ export default function NewDepartmentPage() {
               <CardContent className="space-y-6">
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location *</Label>
+                  <Label>Locations *</Label>
                   <Popover
                     open={locationPopoverOpen}
                     onOpenChange={setLocationPopoverOpen}
@@ -152,12 +155,12 @@ export default function NewDepartmentPage() {
                         variant="outline"
                         type="button"
                         className="w-full justify-between"
-                        aria-label="Select location"
+                        aria-label="Select locations"
                       >
                         <span className="truncate text-left">
-                          {selectedLocation
-                            ? `${selectedLocation.name}${selectedLocation.organization_name ? ` (${selectedLocation.organization_name})` : ""}`
-                            : "Search location"}
+                          {selectedLocations.length > 0
+                            ? selectedLocations.map((l) => l.name).join(", ")
+                            : "Select one or more locations"}
                         </span>
                         <Search className="ml-2 size-4 shrink-0 opacity-60" />
                       </Button>
@@ -168,18 +171,38 @@ export default function NewDepartmentPage() {
                         <CommandList>
                           <CommandEmpty>No locations found.</CommandEmpty>
                           <CommandGroup heading="Locations">
-                            {locations.map((loc) => (
-                              <CommandItem
-                                key={loc.id}
-                                value={`${loc.name} ${loc.organization_name ?? ""}`}
-                                onSelect={() => {
-                                  setLocationId(String(loc.id));
-                                  setLocationPopoverOpen(false);
-                                }}
-                              >
-                                {loc.name}{loc.organization_name ? ` (${loc.organization_name})` : ""}
-                              </CommandItem>
-                            ))}
+                            {locations.map((loc) => {
+                              const checked = selectedLocationIds.includes(loc.id);
+                              return (
+                                <CommandItem
+                                  key={loc.id}
+                                  value={`${loc.name} ${loc.organization_name ?? ""}`}
+                                  onSelect={() => {
+                                    setSelectedLocationIds((prev) => {
+                                      if (checked) {
+                                        setVenueContacts((contacts) => {
+                                          const next = { ...contacts };
+                                          delete next[loc.id];
+                                          return next;
+                                        });
+                                        return prev.filter((id) => id !== loc.id);
+                                      }
+                                      setVenueContacts((contacts) => ({
+                                        ...contacts,
+                                        [loc.id]: contacts[loc.id] ?? { phone: "", email: "" },
+                                      }));
+                                      return [...prev, loc.id];
+                                    });
+                                  }}
+                                >
+                                  <span className={checked ? "font-medium" : undefined}>
+                                    {checked ? "✓ " : ""}
+                                    {loc.name}
+                                    {loc.organization_name ? ` (${loc.organization_name})` : ""}
+                                  </span>
+                                </CommandItem>
+                              );
+                            })}
                           </CommandGroup>
                         </CommandList>
                       </Command>
@@ -196,37 +219,58 @@ export default function NewDepartmentPage() {
                   />
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {/* <div className="space-y-2">
-                    <Label>Head of Department</Label>
-                    <Select value={hodId} onValueChange={setHodId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select user" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Not Assigned</SelectItem>
-                        {users.map((user) => (
-                          <SelectItem key={user.id} value={String(user.id)}>
-                            {user.username}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div> */}
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Extension</Label>
-                    <Input id="phone" placeholder="e.g., 969" />
+                {selectedLocations.length > 0 && (
+                  <div className="space-y-4 rounded-lg border p-4">
+                    <div>
+                      <p className="text-sm font-medium">Venue-wise contact</p>
+                      <p className="text-xs text-muted-foreground">
+                        Set phone and email for each location separately
+                      </p>
+                    </div>
+                    {selectedLocations.map((loc) => (
+                      <div key={loc.id} className="grid gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-3">
+                        <div className="flex items-center sm:col-span-1">
+                          <p className="text-sm font-medium">{loc.name}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`phone-${loc.id}`}>Phone extension</Label>
+                          <Input
+                            id={`phone-${loc.id}`}
+                            value={venueContacts[loc.id]?.phone ?? ""}
+                            onChange={(e) =>
+                              setVenueContacts((prev) => ({
+                                ...prev,
+                                [loc.id]: {
+                                  phone: e.target.value,
+                                  email: prev[loc.id]?.email ?? "",
+                                },
+                              }))
+                            }
+                            placeholder="e.g., 969"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`email-${loc.id}`}>Email</Label>
+                          <Input
+                            id={`email-${loc.id}`}
+                            type="email"
+                            value={venueContacts[loc.id]?.email ?? ""}
+                            onChange={(e) =>
+                              setVenueContacts((prev) => ({
+                                ...prev,
+                                [loc.id]: {
+                                  phone: prev[loc.id]?.phone ?? "",
+                                  email: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="dept@example.com"
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Department Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="dept@example.com"
-                  />
-                </div>
+                )}
 
                 <div className="flex justify-end gap-3 pt-4">
                   <Button variant="outline" type="button" asChild>

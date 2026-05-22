@@ -9,9 +9,6 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  MapPin,
-  Users,
-  Package,
   Eye,
   FileDown,
   Upload,
@@ -45,6 +42,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import {
+  DepartmentContactsCell,
+  DepartmentVenuesCell,
+} from "@/components/departments/department-list-cells";
 import { ListPagination } from "@/components/list-pagination";
 import {
   getDepartmentsPage,
@@ -172,7 +173,7 @@ export default function DepartmentsPage() {
                 Departments
               </h1>
               <p className="text-sm text-muted-foreground">
-                Manage departments within locations
+                Manage departments mapped to locations
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -212,7 +213,7 @@ export default function DepartmentsPage() {
             onOpenChange={setImportDialogOpen}
             endpoint="/workspace/departments/import-csv"
             title="Import departments from CSV"
-            description="Upload a CSV with columns: location_name, name, phone_extension, email. Download sample CSV for exact format."
+            description="Upload a CSV with one row per venue: name, location_name, phone_extension, email, code. Same department at different venues can have different contacts."
             sampleFilename="departments-sample.csv"
             onSuccess={loadDepartments}
           />
@@ -242,58 +243,57 @@ export default function DepartmentsPage() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Location</TableHead>
-                    {/* <TableHead>Head of Dept</TableHead> */}
-                    {/* <TableHead>Staff</TableHead>
-                    <TableHead>Assets</TableHead> */}
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[28%]">Department</TableHead>
+                    <TableHead className="w-[22%]">Venues</TableHead>
+                    <TableHead className="w-[28%]">Contact</TableHead>
+                    <TableHead className="w-[12%] text-right">Assets</TableHead>
                     <TableHead className="w-12" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : departments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                         No departments found
                       </TableCell>
                     </TableRow>
                   ) : (
                     departments.map((dept) => (
-                      <TableRow key={dept.id}>
+                      <TableRow key={dept.id} className="relative z-0 hover:z-0">
                         <TableCell>
                           <Link
                             href={`/departments/${dept.id}`}
-                            className="flex items-center gap-3 hover:underline"
+                            className="flex items-center gap-3 rounded-lg transition-colors hover:bg-muted/40 -m-2 p-2"
                           >
-                            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/10">
                               <FolderTree className="size-4 text-primary" />
                             </div>
-                            <div>
-                              <p className="font-medium">{dept.name}</p>
-                              {/* <p className="text-xs text-muted-foreground">
-                                Code: {dept.code ?? "—"}
-                              </p> */}
+                            <div className="min-w-0">
+                              <p className="truncate font-medium leading-tight">{dept.name}</p>
+                              {dept.code ? (
+                                <Badge variant="outline" className="mt-1 h-5 px-1.5 text-[10px] font-normal">
+                                  {dept.code}
+                                </Badge>
+                              ) : null}
                             </div>
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="size-4 text-muted-foreground" />
-                            <span>{dept.location_name ?? "—"}</span>
-                          </div>
+                          <DepartmentVenuesCell dept={dept} />
                         </TableCell>
-                        {/* <TableCell className="text-muted-foreground">
-                          {dept.hod_name ?? "Not Assigned"}
-                        </TableCell> */}
-                        {/* <TableCell>—</TableCell>
-                        <TableCell>—</TableCell> */}
+                        <TableCell>
+                          <DepartmentContactsCell dept={dept} />
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">
+                          {dept.assets_count ?? 0}
+                        </TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

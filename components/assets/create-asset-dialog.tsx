@@ -65,7 +65,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
 
   const assetType = assetTypes.find((t) => String(t.id) === selectedTypeId);
   const filteredDepartments = locationId
-    ? departments.filter((d) => String(d.location_id) === locationId)
+    ? departments.filter((d) => d.location_ids.includes(Number(locationId)))
     : departments;
   const assignableUsers = users.filter((u) => u.is_active || u.email_on_hold);
   const canSubmit =
