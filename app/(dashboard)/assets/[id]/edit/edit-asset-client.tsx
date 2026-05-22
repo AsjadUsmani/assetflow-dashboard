@@ -13,10 +13,17 @@ import { assetStatusOptions, getAssetById, updateAsset, type Asset, type UpdateA
 import { getAssetTypeById } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
+import {
+  assigneeValueFromAsset,
+  buildAssigneeSelectOptions,
+  parseAssigneeValue,
+} from "@/lib/format-assignee";
+import { getEmployees } from "@/lib/services/employees";
 import { getWorkspaceUsers } from "@/lib/services/workspace-users";
 import type { AssetType } from "@/lib/services/asset-types";
 import type { Location } from "@/lib/services/locations";
 import type { Department } from "@/lib/services/departments";
+import type { Employee } from "@/lib/services/employees";
 import type { WorkspaceUser } from "@/lib/services/workspace-users";
 
 function toDateInputValue(s: string | null): string {
@@ -41,6 +48,7 @@ export function EditAssetClient() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +61,7 @@ export function EditAssetClient() {
   const [status, setStatus] = useState("available");
   const [locationId, setLocationId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
-  const [assignedUserId, setAssignedUserId] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [warrantyEndDate, setWarrantyEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -71,8 +79,12 @@ export function EditAssetClient() {
   const filteredDepartments = locationId
     ? departments.filter((d) => d.location_ids.includes(Number(locationId)))
     : departments;
-  const assignableUsers = users.filter((u) => u.is_active || u.email_on_hold);
-  const canSave = Boolean(asset) && !saving && Boolean(assignedUserId);
+  const assigneeOptions = buildAssigneeSelectOptions(users, employees, {
+    alwaysIncludeEmployeeIds: asset?.assigned_to_employee_id
+      ? [asset.assigned_to_employee_id]
+      : undefined,
+  });
+  const canSave = Boolean(asset) && !saving && Boolean(assignedTo);
 
   useEffect(() => {
     if (Number.isNaN(id)) {
@@ -85,8 +97,9 @@ export function EditAssetClient() {
       getLocations(),
       getDepartments(),
       getWorkspaceUsers(),
+      getEmployees(),
     ])
-      .then(async ([a, locs, depts, usrs]) => {
+      .then(async ([a, locs, depts, usrs, emps]) => {
         if (!a) {
           setError("Asset not found");
           return;
@@ -97,6 +110,7 @@ export function EditAssetClient() {
         setLocations(locs);
         setDepartments(depts);
         setUsers(usrs);
+        setEmployees(emps);
         setHostName(a.host_name ?? a.name);
         setSerialNumber(a.serial_number ?? "");
         setAssetTag(a.asset_tag ?? "");
@@ -105,7 +119,7 @@ export function EditAssetClient() {
         setStatus(a.status);
         setLocationId(a.location_id ? String(a.location_id) : "");
         setDepartmentId(a.department_id ? String(a.department_id) : "");
-        setAssignedUserId(a.assigned_to_user_id ? String(a.assigned_to_user_id) : "");
+        setAssignedTo(assigneeValueFromAsset(a));
         setPurchaseDate(toDateInputValue(a.purchase_date));
         setWarrantyEndDate(toDateInputValue(a.warranty_end_date));
         setExpiryDate(toDateInputValue(a.expiry_date));
@@ -192,7 +206,7 @@ export function EditAssetClient() {
         status,
         location_id: locationId ? Number(locationId) : null,
         department_id: departmentId ? Number(departmentId) : null,
-        assigned_to_user_id: assignedUserId ? Number(assignedUserId) : null,
+        ...parseAssigneeValue(assignedTo),
         purchase_date: purchaseDate || null,
         warranty_end_date: warrantyEndDate || null,
         expiry_date: expiryDate || null,
@@ -359,15 +373,11 @@ export function EditAssetClient() {
                 <div className="space-y-2 min-w-0 sm:col-span-2">
                   <Label>Assigned To</Label>
                   <SearchableSelect
-                    value={assignedUserId}
-                    onValueChange={setAssignedUserId}
-                    placeholder="Search or select user"
-                    searchPlaceholder="Search by username or email..."
-                    options={assignableUsers.map((user) => ({
-                      value: String(user.id),
-                      label: `${user.username}${!user.is_active ? " (inactive)" : ""}${user.email_on_hold ? " · hold" : ""}`,
-                      searchValue: `${user.username} ${user.email ?? ""}`,
-                    }))}
+                    value={assignedTo}
+                    onValueChange={setAssignedTo}
+                    placeholder="Select user or employee"
+                    searchPlaceholder="Search by name or email..."
+                    options={assigneeOptions}
                   />
                 </div>
                 <div className="space-y-2 min-w-0">

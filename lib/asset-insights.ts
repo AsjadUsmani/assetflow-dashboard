@@ -20,6 +20,7 @@ export function hasMissingNonCompulsoryInfo(asset: Asset): boolean {
     asset.location_id,
     asset.department_id,
     asset.assigned_to_user_id,
+    asset.assigned_to_employee_id,
     asset.managed_by_user_id,
     asset.purchase_date,
     asset.warranty_end_date,

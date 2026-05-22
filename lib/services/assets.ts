@@ -21,8 +21,10 @@ export type Asset = {
   department_id: number | null
   department_name: string | null
   assigned_to_user_id: number | null
+  assigned_to_employee_id: number | null
   assigned_to_name: string | null
   assigned_to_username: string | null
+  assigned_to_email: string | null
   managed_by_user_id: number | null
   managed_by_user_name: string | null
   created_by_user_id: number | null
@@ -66,6 +68,7 @@ export type CreateAssetBody = {
   location_id?: number
   department_id?: number
   assigned_to_user_id?: number
+  assigned_to_employee_id?: number
   purchase_date?: string
   warranty_end_date?: string
   expiry_date?: string
@@ -89,6 +92,7 @@ export type UpdateAssetBody = {
   location_id?: number | null
   department_id?: number | null
   assigned_to_user_id?: number | null
+  assigned_to_employee_id?: number | null
   purchase_date?: string | null
   warranty_end_date?: string | null
   expiry_date?: string | null

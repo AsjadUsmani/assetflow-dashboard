@@ -28,11 +28,14 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getAssetTypes } from "@/lib/services/asset-types";
 import { getLocations } from "@/lib/services/locations";
 import { getDepartments } from "@/lib/services/departments";
+import { buildAssigneeSelectOptions, parseAssigneeValue } from "@/lib/format-assignee";
+import { getEmployees } from "@/lib/services/employees";
 import { getWorkspaceUsers } from "@/lib/services/workspace-users";
 import { assetStatusOptions, createAsset, type CreateAssetBody } from "@/lib/services/assets";
 import type { AssetType } from "@/lib/services/asset-types";
 import type { Location } from "@/lib/services/locations";
 import type { Department } from "@/lib/services/departments";
+import type { Employee } from "@/lib/services/employees";
 import type { WorkspaceUser } from "@/lib/services/workspace-users";
 
 export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
@@ -41,6 +44,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +57,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [status, setStatus] = useState("available");
   const [locationId, setLocationId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
-  const [assignedUserId, setAssignedUserId] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
   const [assignedDate, setAssignedDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [remark, setRemark] = useState("");
@@ -67,12 +71,12 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   const filteredDepartments = locationId
     ? departments.filter((d) => d.location_ids.includes(Number(locationId)))
     : departments;
-  const assignableUsers = users.filter((u) => u.is_active || u.email_on_hold);
+  const assigneeOptions = buildAssigneeSelectOptions(users, employees);
   const canSubmit =
     !loading &&
     Boolean(selectedTypeId) &&
     Boolean(name.trim()) &&
-    Boolean(assignedUserId);
+    Boolean(assignedTo);
 
   const getPropertyDefaultValue = (prop: AssetType["properties"][number]): string | number | boolean | undefined => {
     const dataType = prop.data_type ?? "text";
@@ -113,12 +117,13 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   useEffect(() => {
     if (open) {
       setLoading(true);
-      Promise.all([getAssetTypes(), getLocations(), getDepartments(), getWorkspaceUsers()])
-        .then(([types, locs, depts, usrs]) => {
+      Promise.all([getAssetTypes(), getLocations(), getDepartments(), getWorkspaceUsers(), getEmployees()])
+        .then(([types, locs, depts, usrs, emps]) => {
           setAssetTypes(types);
           setLocations(locs);
           setDepartments(depts);
           setUsers(usrs);
+          setEmployees(emps);
         })
         .catch((err) => {
           setError(err instanceof Error ? err.message : "Failed to load data");
@@ -136,7 +141,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
       setStatus("available");
       setLocationId("");
       setDepartmentId("");
-      setAssignedUserId("");
+      setAssignedTo("");
       setAssignedDate("");
       setReturnDate("");
       setRemark("");
@@ -174,7 +179,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
   };
 
   const handleSubmit = async () => {
-    if (!selectedTypeId || !name.trim() || !assignedUserId) return;
+    if (!selectedTypeId || !name.trim() || !assignedTo) return;
 
     setPropertyErrors({});
     setError(null);
@@ -198,7 +203,7 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
         status,
         location_id: locationId ? Number(locationId) : undefined,
         department_id: departmentId ? Number(departmentId) : undefined,
-        assigned_to_user_id: assignedUserId ? Number(assignedUserId) : undefined,
+        ...parseAssigneeValue(assignedTo),
         purchase_date: purchaseDate || undefined,
         warranty_end_date: warrantyEndDate || undefined,
         expiry_date: expiryDate || undefined,
@@ -348,15 +353,11 @@ export function CreateAssetDialog({ onSuccess }: { onSuccess?: () => void }) {
               <div className="space-y-2 min-w-0 sm:col-span-2">
                 <Label>Assigned To <span className="text-destructive">*</span></Label>
                 <SearchableSelect
-                  value={assignedUserId}
-                  onValueChange={setAssignedUserId}
-                  placeholder="Search or select user"
-                  searchPlaceholder="Search by username or email..."
-                  options={assignableUsers.map((user) => ({
-                    value: String(user.id),
-                    label: `${user.username}${!user.is_active ? " (inactive)" : ""}${user.email_on_hold ? " · hold" : ""}`,
-                    searchValue: `${user.username} ${user.email ?? ""}`,
-                  }))}
+                  value={assignedTo}
+                  onValueChange={setAssignedTo}
+                  placeholder="Select user or employee"
+                  searchPlaceholder="Search by name or email..."
+                  options={assigneeOptions}
                 />
               </div>
               <div className="space-y-2 min-w-0">

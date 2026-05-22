@@ -5,6 +5,8 @@ export type WorkspaceUser = {
   id: number
   username: string
   email: string | null
+  first_name: string | null
+  last_name: string | null
   title: string | null
   designation_id: number | null
   designation_name: string | null

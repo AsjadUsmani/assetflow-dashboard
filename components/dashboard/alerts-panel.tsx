@@ -76,7 +76,9 @@ export function AlertsPanel({ filters }: { filters: DashboardFilterState }) {
   }, [filters]);
 
   const alerts: AlertItem[] = useMemo(() => {
-    const accountabilityGaps = assets.filter((asset) => asset.assigned_to_user_id == null).length;
+    const accountabilityGaps = assets.filter(
+      (asset) => asset.assigned_to_user_id == null && asset.assigned_to_employee_id == null,
+    ).length;
     const untrackedAssets = assets.filter((asset) => !asset.asset_type_name).length;
     const maintenanceDue = requests.filter(
       (request) => request.type === "maintenance" && ["pending", "in_review"].includes(request.status),

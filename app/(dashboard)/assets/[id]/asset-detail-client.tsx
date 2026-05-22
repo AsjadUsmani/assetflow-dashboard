@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatAssigneeDisplay, hasAssetAssignee } from "@/lib/format-assignee";
 import { assetStatusConfig, getAssetById } from "@/lib/services/assets";
 import { deleteAsset } from "@/lib/services/assets";
 import type { Asset } from "@/lib/services/assets";
@@ -177,7 +178,15 @@ export function AssetDetailClient() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <User className="size-4 text-muted-foreground" />
-                  <span className="text-foreground">{asset.assigned_to_username ?? asset.assigned_to_name ?? "Unassigned"}</span>
+                  <span className="text-foreground">
+                    {hasAssetAssignee(asset)
+                      ? formatAssigneeDisplay(
+                          asset.assigned_to_name,
+                          asset.assigned_to_email,
+                          asset.assigned_to_username,
+                        )
+                      : "Unassigned"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <User className="size-4 text-muted-foreground" />
