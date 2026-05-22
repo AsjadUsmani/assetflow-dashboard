@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, FolderTree, Search } from "lucide-react";
 
@@ -44,6 +44,8 @@ import type { WorkspaceUser } from "@/lib/services/workspace-users";
 
 export default function NewDepartmentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const presetLocationId = Number(searchParams.get("location_id") ?? "");
   const [locations, setLocations] = useState<Location[]>([]);
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [selectedLocationIds, setSelectedLocationIds] = useState<number[]>([]);
@@ -64,12 +66,19 @@ export default function NewDepartmentPage() {
       .then(([locs, wsUsers]) => {
         setLocations(locs);
         setUsers(wsUsers.filter((u) => u.is_active));
+        if (Number.isInteger(presetLocationId) && presetLocationId > 0) {
+          const exists = locs.some((l) => l.id === presetLocationId);
+          if (exists) {
+            setSelectedLocationIds([presetLocationId]);
+            setVenueContacts({ [presetLocationId]: { phone: "", email: "" } });
+          }
+        }
       })
       .catch(() => {
         setLocations([]);
         setUsers([]);
       });
-  }, []);
+  }, [presetLocationId]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

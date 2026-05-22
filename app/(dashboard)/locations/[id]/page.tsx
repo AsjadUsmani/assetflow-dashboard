@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
 import {
   MapPin,
@@ -16,7 +16,6 @@ import {
   Trash2,
   Globe,
   FileText,
-  Hash,
   Navigation,
 } from "lucide-react";
 
@@ -33,19 +32,38 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LocationDepartmentsPanel } from "@/components/locations/location-departments-panel";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { getLocationById, deleteLocation, type Location } from "@/lib/services/locations";
-import { getDepartments, type Department } from "@/lib/services/departments";
+  getLocationById,
+  getLocationDepartments,
+  deleteLocation,
+  type Location,
+  type LocationDepartment,
+} from "@/lib/services/locations";
+
+function InfoField({
+  icon: Icon,
+  label,
+  value,
+  className,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value?: string | null;
+  className?: string;
+}) {
+  return (
+    <div className={`flex gap-3 rounded-lg bg-muted/30 p-3 ${className ?? ""}`}>
+      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="mt-1 text-sm leading-relaxed text-foreground">{value?.trim() ? value : "—"}</p>
+      </div>
+    </div>
+  );
+}
 
 const COUNTRY_OPTIONS: Record<string, string> = {
   us: "United States",
@@ -64,7 +82,7 @@ export default function LocationDetailPage({
 }) {
   const [id, setId] = useState<string | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departments, setDepartments] = useState<LocationDepartment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,7 +97,7 @@ export default function LocationDetailPage({
         return;
       }
       setId(p.id);
-      Promise.all([getLocationById(numId), getDepartments(numId)])
+      Promise.all([getLocationById(numId), getLocationDepartments(numId)])
         .then(([loc, depts]) => {
           if (cancelled) return;
           setLocation(loc ?? null);
@@ -198,7 +216,7 @@ export default function LocationDetailPage({
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Users className="size-5 text-primary" />
-                  <span className="text-2xl font-bold">{departments.length}</span>
+                  <span className="text-2xl font-bold">{location.departments_count ?? departments.length}</span>
                 </div>
               </CardContent>
             </Card>
@@ -230,139 +248,56 @@ export default function LocationDetailPage({
             </Card> */}
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Location Information</CardTitle>
-                <CardDescription>Details about this location</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Building2 className="mt-0.5 size-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Organization</p>
-                    <p className="text-sm text-muted-foreground">
-                      {location.organization_name ?? "—"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 size-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Street Address</p>
-                    <p className="text-sm text-muted-foreground">{location.address}</p>
-                  </div>
-                </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Location Information</CardTitle>
+              <CardDescription>Details about this location</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 sm:grid-cols-2">
+                <InfoField icon={Building2} label="Organization" value={location.organization_name} />
+                <InfoField icon={MapPin} label="Street address" value={location.address} />
                 {(location.city || location.state || location.postal_code) && (
-                  <div className="flex items-start gap-3">
-                    <Navigation className="mt-0.5 size-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">City / State / Postal</p>
-                      <p className="text-sm text-muted-foreground">
-                        {[location.city, location.state, location.postal_code]
-                          .filter(Boolean)
-                          .join(", ") || "—"}
-                      </p>
-                    </div>
-                  </div>
+                  <InfoField
+                    icon={Navigation}
+                    label="City / state / postal"
+                    value={[location.city, location.state, location.postal_code].filter(Boolean).join(", ")}
+                  />
                 )}
                 {location.country_code && (
-                  <div className="flex items-start gap-3">
-                    <Globe className="mt-0.5 size-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Country</p>
-                      <p className="text-sm text-muted-foreground">
-                        {COUNTRY_OPTIONS[location.country_code] ?? location.country_code}
-                      </p>
-                    </div>
-                  </div>
+                  <InfoField
+                    icon={Globe}
+                    label="Country"
+                    value={COUNTRY_OPTIONS[location.country_code] ?? location.country_code}
+                  />
                 )}
-                <div className="flex items-start gap-3">
-                  <Phone className="mt-0.5 size-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Phone</p>
-                    <p className="text-sm text-muted-foreground">{location.phone ?? "—"}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Mail className="mt-0.5 size-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Email</p>
-                    <p className="text-sm text-muted-foreground">{location.email ?? "—"}</p>
-                  </div>
-                </div>
+                <InfoField icon={Phone} label="Phone" value={location.phone} />
+                <InfoField icon={Mail} label="Email" value={location.email} />
                 {location.notes && (
-                  <div className="flex items-start gap-3">
-                    <FileText className="mt-0.5 size-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Notes</p>
-                      <p className="text-sm text-muted-foreground">{location.notes}</p>
-                    </div>
-                  </div>
+                  <InfoField icon={FileText} label="Notes" value={location.notes} className="sm:col-span-2" />
                 )}
-                <div className="flex items-start gap-3">
-                  <Calendar className="mt-0.5 size-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Created</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(location.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                <InfoField
+                  icon={Calendar}
+                  label="Created"
+                  value={new Date(location.created_at).toLocaleDateString()}
+                />
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Departments</CardTitle>
-                    <CardDescription>Departments at this location</CardDescription>
-                  </div>
-                  <Button size="sm" variant="outline" asChild>
-                    <Link href="/departments/new">Add Department</Link>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {departments.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Assets</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {departments.slice(0, 5).map((dept) => (
-                        <TableRow key={dept.id}>
-                          <TableCell>
-                            <Link
-                              href={`/departments/${dept.id}`}
-                              className="font-medium hover:underline"
-                            >
-                              {dept.name}
-                            </Link>
-                          </TableCell>
-                          <TableCell>{dept.assets_count ?? 0}</TableCell>
-                          <TableCell>Active</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Users className="mb-2 size-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">No departments yet</p>
-                    <Button size="sm" className="mt-4" asChild>
-                      <Link href="/departments/new">Add First Department</Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle>Departments at this venue</CardTitle>
+              <CardDescription>
+                Teams linked to {location.name} with contact details for this cinema only.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <LocationDepartmentsPanel
+                locationId={id}
+                locationName={location.name}
+                departments={departments}
+              />
+            </CardContent>
+          </Card>
         </div>
       </main>
     </>

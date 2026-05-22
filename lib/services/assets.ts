@@ -110,6 +110,7 @@ export const assetStatusOptions = [
   { value: "lost", label: "Lost" },
   { value: "pending_disposal", label: "Pending for Disposal" },
   { value: "disposed", label: "Disposed" },
+  { value: "buy_back", label: "Buy Back" },
 ] as const
 
 export const assetStatusConfig: Record<string, { label: string; className: string }> = {
@@ -124,6 +125,7 @@ export const assetStatusConfig: Record<string, { label: string; className: strin
   lost: { label: "Lost", className: "bg-destructive/20 text-destructive border-destructive/30" },
   pending_disposal: { label: "Pending for Disposal", className: "bg-amber-500/20 text-amber-500 border-amber-500/30" },
   disposed: { label: "Disposed", className: "bg-slate-500/20 text-slate-300 border-slate-500/30" },
+  buy_back: { label: "Buy Back", className: "bg-orange-500/20 text-orange-600 border-orange-500/30" },
 }
 
 export type AssignmentHistoryEntry = {
@@ -193,8 +195,34 @@ export async function exportAssetsCsv(): Promise<Blob> {
   return apiService.getFile(`${BASE}/export-csv`)
 }
 
+export type AssignmentHistoryListQuery = ListPaginationQuery & {
+  asset_id?: number
+}
+
 export async function getAssignmentHistory(assetId?: number): Promise<AssignmentHistoryEntry[]> {
   const query = assetId != null ? `?asset_id=${assetId}` : ""
   const json = await apiService.get<AssignmentHistoryEntry[]>(`${BASE}/assignment-history${query}`, true)
   return json.data ?? []
+}
+
+export async function getAssignmentHistoryPage(
+  query: AssignmentHistoryListQuery,
+): Promise<PaginatedResponse<AssignmentHistoryEntry>> {
+  const json = await apiService.get<PaginatedResponse<AssignmentHistoryEntry>>(
+    `${BASE}/assignment-history${buildPaginationQuery(query)}`,
+    true,
+  )
+  return (
+    json.data ?? {
+      items: [],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        total_pages: 0,
+        has_next_page: false,
+        has_previous_page: false,
+      },
+    }
+  )
 }

@@ -38,6 +38,18 @@ export type LocationListQuery = ListPaginationQuery & {
   search?: string
 }
 
+/** Department linked to a specific location (venue-wise contact). */
+export type LocationDepartment = {
+  id: number
+  name: string
+  code: string | null
+  phone: string | null
+  email: string | null
+  hod_id: number | null
+  hod_name: string | null
+  assets_count: number
+}
+
 const BASE = "/workspace/locations"
 
 export async function getLocations(): Promise<Location[]> {
@@ -55,6 +67,11 @@ export async function getLocationsPage(
 export async function getLocationById(id: number): Promise<Location | null> {
   const json = await apiService.get<Location>(`${BASE}/${id}`, true)
   return json.data ?? null
+}
+
+export async function getLocationDepartments(locationId: number): Promise<LocationDepartment[]> {
+  const json = await apiService.get<LocationDepartment[]>(`${BASE}/${locationId}/departments`, true)
+  return json.data ?? []
 }
 
 export async function createLocation(body: CreateLocationBody): Promise<Location> {
